@@ -20,6 +20,8 @@ Sist verifisert: 33 beståtte tester. Nettleserkontroll av validering, kundebase
 
 ## Levert funksjonalitet
 
+Porteføljesiden inneholder nå også en strategisk ramme (visjon, objectives, key results med dekningsrapport), et veikart i Now/Next/Later, forutsetninger mellom tiltak med «låser opp»-verdi, og en scenariosammenligning over 24 måneder med kumulativ nettoverdikurve. Disse deler tiltakene i minnet med porteføljen; det er grunnen til at de ligger på samme side og ikke som egen fane.
+
 Porteføljen har flere redigerbare tiltak, lavt/forventet/høyt churn-utfall, brutto-/nettoverdi, ROI, strategisk fit (lav/middels/høy, med eget notat), sortering og sensitivitet. Kostnadsposter kan være årlige eller engangsbeløp, kjente eller anslåtte. Team har bemanning og varighet i tre scenarioer, oppstart og ukesats. Risikoer og avhengigheter har ansvar, konsekvens, status og håndtering. Kilderegisteret støtter dokumentlenker, kildetype, dato/versjon og hva kilden underbygger, samt kobling til effekt, kostnader, team og risiko.
 
 Produktets totale kundebase er en egen innstilling. Adresserbare kunder må ikke overstige basen. Ved senking av basen vises varsel med lenker til tiltak som må korrigeres. Skjemafeil markerer relevante felt, forklarer verdiene og flytter fokus til feilen ved lagring; retting stjeler ikke fokus.
@@ -35,7 +37,9 @@ Prioriteringslab sammenligner to utvalg og rekkefølger av arbeid med samme team
 5. Problemkostnad og mulig bruttopotensial er ikke garantert tiltaksverdi. Innsiktsarbeid får ikke automatisk gevinst i planregnskapet.
 6. Alternativkostnad gjelder et konkret alternativ. Ikke legg utsettelsesberegningen oppå planforskjellen; da dobbelttelles tapet.
 7. Teamkostnad er en økonomisk ressurskostnad, ikke nødvendigvis en ekstra utbetaling. Unngå å føre den på nytt i øvrige kostnadsposter.
-8. Porteføljen proraterer ikke effekten etter teamets ferdiguke. Brukeren må tilpasse kundeverdi/rekkevidde. Laben har en annen, eksplisitt modell: sekvensielt arbeid i ett team og årlig gevinst/drift prorateres fra ferdiguke til uke 52. Ikke bland modellene uten en uttrykkelig beslutning.
+8. Porteføljen proraterer ikke effekten etter teamets ferdiguke. Brukeren må tilpasse kundeverdi/rekkevidde. Laben har en annen, eksplisitt modell: sekvensielt arbeid i ett team og årlig gevinst/drift prorateres fra ferdiguke til uke 52. Veikartet har en tredje: 24 måneder, månedlig, med proratering fra landingsmåned. Ikke bland modellene uten en uttrykkelig beslutning.
+9. Låst verdi («låser opp X kr») vises ved siden av nettoverdien, aldri under, og summeres aldri inn i en total. Verdiene overlapper mellom ledd i en kjede, så en sum på tvers er meningsløs.
+10. Objectives, key results og visjon er en kvalitativ ramme. De endrer ingen økonomiske tall, og manglende kobling er en rapportert mangel, ikke en valideringsfeil.
 
 ## Kjente begrensninger
 

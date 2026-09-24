@@ -70,7 +70,8 @@ export function seedResources(t,index) {
     [['Plattform & nettverk','Integrasjon og automatisert feilretting',1,2,3,6,8,12,0,30000],['Kundeservice','Pilot og nye arbeidsprosesser',.25,.5,1,4,6,8,4,22000]],
     [['Wi-Fi & CPE','Forbedre firmware og dekning',1,2,3,8,12,16,0,30000],['Kundeopplevelse','Veiledning og brukertest',.5,1,1.5,4,6,8,4,26000]],
     [['App & digitale flater','Integrere tjenesten i kundeappen',.5,1,2,4,6,10,0,30000],['Sikkerhet & personvern','Vurdere løsning og databehandling',.2,.4,.6,2,3,5,1,32000]],
-    [['App & digitale flater','Onboarding og aktiveringsflyt',.5,1,1.5,3,5,8,0,30000],['Kundeopplevelse','Kommunikasjon og adopsjonsmåling',.25,.5,1,3,4,6,2,26000]]
+    [['App & digitale flater','Onboarding og aktiveringsflyt',.5,1,1.5,3,5,8,0,30000],['Kundeopplevelse','Kommunikasjon og adopsjonsmåling',.25,.5,1,3,4,6,2,26000]],
+    [['Plattform & nettverk','Datamodell, innsamling og tilgangsstyring',1,2,3,10,14,20,0,30000]]
   ];
   return {...t,sources:[],effectSourceId:'',risks:seedRisks(t,index),costItems:[
     {id:`${t.id}-annual`,name:'Tjeneste, lisens og løpende drift',kind:'annual',basis:'estimate',...estimate(annual*.8,annual,annual*1.25),note:'Illustrativt årsbeløp. Intern teaminnsats er ikke inkludert.'},

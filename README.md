@@ -14,6 +14,10 @@ Kjør `npm start` fra denne mappen, eller `python3 -m http.server 4173 --bind 12
 - Interaktiv sensitivitetsgraf med nullpunkt og separat simulering.
 - Evidensnotat, segment, rekkevidde og baseline.
 - Strategisk fit (lav/middels/høy) med eget notat, vist som egen kolonne og badge atskilt fra evidensnivå. Endrer ikke nettoverdi eller ROI.
+- Visjon, objectives og key results, med kobling fra tiltak til key results og en dekningsrapport som viser key results uten tiltak og tiltak uten key result.
+- Veikart i Now (0–3 mnd), Next (3–12 mnd) og Later (12+ mnd), med en egen kolonne for tiltak som ikke er plassert.
+- Forutsetninger mellom tiltak, og «låser opp»-verdi på tiltaket som forutsettes.
+- Scenariosammenligning over 24 måneder med kumulativ nettoverdikurve, redigerbar rekkefølge og forutsetningene synlig ved siden av.
 - Redigerbare kostnadsposter med type (årlig/engang), grunnlag (kjent/anslag), lav/forventet/høy og kildenotat.
 - Redigerbare team med leveranse, bemanning og varighet i tre scenarioer, oppstart, ukesats og valg om kostnaden inngår.
 - Kostnadsfordeling, samlet ressursinnsats, gjennomføringsplan og teambelastning på tvers av tiltak.
@@ -51,6 +55,28 @@ Kildelenker åpnes i ny fane. Kilder lagres bare i denne økten sammen med tilta
 Risiko og avhengigheter endrer ikke økonomiske resultater automatisk. Åpne risikoer med høy konsekvens flagges uavhengig av sannsynlighet; dette er ingen beregnet risikoscore. Juster churn-, rekkevidde-, kostnads- og tidsanslag manuelt når risikovurderingen gir grunnlag for det. Eksempelrisikoene er illustrative. Manglende registrering betyr ikke at et tiltak er risikofritt.
 
 Strategisk fit (lav/middels/høy, med eget notat) er en egen, synlig vurdering av hvor godt tiltaket støtter valgt produktstrategi. Den kan brukes til sortering, men endrer aldri nettoverdi, ROI eller evidensnivå. Eksempelverdiene er illustrative.
+
+## Veikart og scenarioer
+
+Veikartet og scenariosammenligningen ligger på samme side som porteføljen og bruker de samme tiltakene i minnet. Objectives, key results og visjon er en egen, kvalitativ ramme: de kan brukes til å se dekning, men endrer ingen økonomiske tall.
+
+Et enablende tiltak er ikke en egen type. Det er et tiltak med null churn-effekt som et annet tiltak forutsetter; gevinsten blir null av seg selv. På tiltaket som forutsettes vises «låser opp» — summen av nettoverdien til tiltakene det gjør mulig. Beløpet summeres aldri inn i porteføljen eller i en scenariototal, og det overlapper mellom ledd i en kjede: hvis A låser opp B som låser opp C, telles C i både A og B. En sum på tvers ville derfor vært meningsløs.
+
+Scenarioene er ordnede lister. Arbeidet skjer sekvensielt, ett tiltak av gangen, og hvert tiltak bruker sin egen kalendertid fra teamdataene. Landingsmåneden er der effekten starter. Kurven er kumulativ nettoverdi måned for måned: bruttogevinst delt på 12 og årlige driftskostnader delt på 12 løper fra landing, lønn fordeles over arbeidsmånedene, og engangskostnaden belastes ved oppstart. Et tiltak som lander etter måned 24 bidrar med null; det klippes ikke inn i horisonten.
+
+**Veikartets tall er ikke porteføljens tall.** Porteføljen viser alltid ett helt driftsår per tiltak. Veikartet viser bare det som rekker å inntreffe innen 24 måneder i den valgte rekkefølgen — det kan bli både mindre (sen landing) og mer (over ett års drift innenfor horisonten). Begge vises ved siden av hverandre i tabellen under kurven. Forskjellen mellom to scenarioer er alternativkostnaden; ikke legg en egen utsettelsesberegning oppå. Summene er ikke korrigert for overlapp mellom tiltak.
+
+Plassering i Now/Next/Later er en intensjon og valideres ikke mot beregnet landing. Når de er uenige, vises det som et eget signal — det er en av de mest nyttige observasjonene verktøyet gir.
+
+### Tre tidsmodeller
+
+Verktøyet har nå tre bevisst ulike tidsmodeller. Ikke bland dem uten en uttrykkelig beslutning:
+
+| Flate | Horisont | Proratering |
+| --- | --- | --- |
+| Tiltaksporteføljen | 12 måneder | Nei — brukeren justerer rekkevidde og kundeverdi selv |
+| Prioriteringslaben | 52 uker, ett team sekvensielt | Ja, fra ferdiguke |
+| Veikart og scenarioer | 24 måneder, månedlig | Ja, fra landingsmåned |
 
 ## Prioriteringslab
 

@@ -1,0 +1,165 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {estimate} from '../dist/resources.mjs';
+import {examples,scenario} from '../dist/model.mjs';
+import {HORIZON_MONTHS,schedule,scenarioCurve,compareScenarios,unlocks,coverage,placementSignals,seedRoadmap,validateRoadmap,validateRoadmapIssue} from '../dist/roadmap-model.mjs';
+
+// Tall valgt slik at gevinst og drift er delelig på 12; da kan likhet med porteføljen sjekkes eksakt.
+const base={...examples[0],id:'base',name:'Base',customers:100000,reach:100,baseline:10,low:0,expected:.4,high:.8,value:9000,
+ costItems:[{id:'c-a',name:'Drift',kind:'annual',basis:'known',...estimate(120000)},{id:'c-o',name:'Etablering',kind:'once',basis:'known',...estimate(200000)}],
+ teams:[],risks:[],sources:[],effectSourceId:'',requires:[],keyResultIds:[],horizon:'now'};
+const team={id:'tm',name:'Team',role:'Bygg',fte:estimate(1,1,1),weeks:estimate(4,4,4),start:0,rate:10000,includeCost:true,note:''};
+const built={...base,id:'built',name:'Built',teams:[team]};
+const sum=(curve,field)=>curve.reduce((n,m)=>n+m[field],0);
+
+test('Tiltak uten varighet lander i måned 0 og gir porteføljens nettoverdi etter tolv måneder',()=>{
+ const {rows,curve}=scenarioCurve(['base'],[base]);
+ assert.equal(rows[0].landing,0);
+ assert.equal(curve[11].cumulative,scenario(base).net);
+ assert.equal(curve[11].cumulative,3280000);
+});
+
+test('Tolv effektmåneder fra landing gir nøyaktig porteføljens nettoverdi uansett landingsmåned',()=>{
+ const {rows,curve}=scenarioCurve(['built'],[built]);
+ assert.equal(rows[0].landing,1);
+ assert.equal(curve[rows[0].landing+11].cumulative,scenario(built).net);
+});
+
+test('Kostnadene i kurven summerer til drift, engang og lønn – aldri til den ferdige totalsummen',()=>{
+ const {rows,curve}=scenarioCurve(['built'],[built]);
+ const r=rows[0];
+ assert.equal(sum(curve,'once'),r.once);
+ assert.equal(sum(curve,'labor'),r.labor);
+ assert.equal(sum(curve,'operating'),r.annual/12*r.effectMonths);
+ // costBreakdown.total ville vært 360 000; det beløpet skal aldri opptre i kurven.
+ assert.equal(sum(curve,'once')+sum(curve,'labor'),r.once+r.labor);
+});
+
+test('Lønn påløper mens arbeidet pågår, drift og gevinst først fra landing',()=>{
+ const {curve}=scenarioCurve(['built'],[built]);
+ assert.equal(curve[0].labor,40000);
+ assert.equal(curve[0].gross,0);
+ assert.equal(curve[0].operating,0);
+ assert.ok(curve[1].gross>0);
+ assert.equal(curve[1].labor,0);
+});
+
+test('Rekkefølge forskyver landing og endrer kurven, men ikke samlet kostnad',()=>{
+ const other={...built,id:'other',name:'Other'};
+ const first=scenarioCurve(['built','other'],[built,other]);
+ const second=scenarioCurve(['other','built'],[built,other]);
+ assert.deepEqual(first.rows.map(r=>r.landing),second.rows.map(r=>r.landing));
+ assert.equal(sum(first.curve,'labor'),sum(second.curve,'labor'));
+ assert.equal(first.rows[1].landing,2);
+ assert.ok(first.rows[1].landing>first.rows[0].landing);
+});
+
+test('Tiltak som lander etter horisonten bidrar med null gevinst og klippes ikke inn',()=>{
+ const long={...base,teams:[{...team,weeks:estimate(52,52,52)}]};
+ const a={...long,id:'a',name:'A'},b={...long,id:'b',name:'B'},c={...long,id:'c',name:'C'};
+ const {rows}=scenarioCurve(['a','b','c'],[a,b,c]);
+ assert.equal(rows[2].landing,36);
+ assert.ok(rows[2].beyondHorizon);
+ assert.equal(rows[2].effectMonths,0);
+ assert.equal(rows[2].applied.gross,0);
+});
+
+test('Enablende tiltak uten churn-effekt gir bare kostnad, aldri gevinst',()=>{
+ const enabler={...base,id:'enabler',name:'Enabler',customers:0,reach:0,low:0,expected:0,high:0};
+ const {curve,net}=scenarioCurve(['enabler'],[enabler]);
+ assert.equal(sum(curve,'gross'),0);
+ assert.ok(net<0);
+});
+
+test('Låst verdi endrer ingen total, og kurven er identisk med og uten kobling',()=>{
+ const a={...base,id:'a',name:'A'},b={...base,id:'b',name:'B',requires:['a']};
+ const linked=scenarioCurve(['a','b'],[a,b]);
+ const loose=scenarioCurve(['a','b'],[a,{...b,requires:[]}]);
+ assert.deepEqual(linked.curve,loose.curve);
+ assert.equal(linked.net,loose.net);
+});
+
+test('Låst verdi overlapper i en kjede og kan derfor aldri summeres på tvers',()=>{
+ const a={...base,id:'a',name:'A'},b={...base,id:'b',name:'B',requires:['a']},c={...base,id:'c',name:'C',requires:['b']};
+ const result=unlocks([a,b,c]);
+ const byId=Object.fromEntries(result.map(r=>[r.id,r]));
+ assert.deepEqual(byId.a.direct,['b']);
+ assert.deepEqual(byId.a.downstream.sort(),['b','c']);
+ assert.deepEqual(byId.b.downstream,['c']);
+ // C teller i både A og B sin låste verdi. En sum på tvers ville dobbeltelt C.
+ assert.equal(byId.a.unlockedNet,scenario(b).net+scenario(c).net);
+ assert.equal(byId.c.unlockedNet,0);
+});
+
+test('Forskjellen mellom to scenarioer er planforskjellen alene',()=>{
+ const a={...base,id:'a',name:'A'},b={...built,id:'b',name:'B'};
+ const {delta,a:first,b:second}=compareScenarios(['a'],['b'],[a,b]);
+ assert.equal(delta,second.net-first.net);
+});
+
+test('Key results og strategisk fit endrer ingen økonomiske resultater',()=>{
+ const plain=scenarioCurve(['base'],[base]);
+ const tagged=scenarioCurve(['base'],[{...base,keyResultIds:['kr-churn'],strategicFit:'low'}]);
+ assert.deepEqual(plain.curve,tagged.curve);
+});
+
+test('Lavscenarioet bruker høy kostnad og dermed lengste varighet',()=>{
+ const spread={...base,id:'spread',teams:[{...team,weeks:estimate(2,4,8)}]};
+ assert.equal(schedule([spread],'low')[0].duration,8);
+ assert.equal(schedule([spread],'expected')[0].duration,4);
+ assert.equal(schedule([spread],'high')[0].duration,2);
+});
+
+test('Sirkulær avhengighet avvises med navngitt kjede',()=>{
+ const a={...base,id:'a',name:'A',requires:['b']},b={...base,id:'b',name:'B',requires:['a']};
+ const issue=validateRoadmapIssue({scenarios:[]},[a,b]);
+ assert.ok(issue);
+ assert.match(issue.message,/Sirkulær avhengighet/);
+ assert.match(issue.message,/«A»/);
+ assert.match(issue.message,/«B»/);
+ assert.ok(issue.targets.every(t=>t.field==='requires'));
+});
+
+test('Tiltak kan ikke forutsette seg selv eller noe som er slettet',()=>{
+ const self={...base,id:'a',name:'A',requires:['a']};
+ assert.match(validateRoadmap({scenarios:[]},[self]),/kan ikke forutsette seg selv/);
+ const orphan={...base,id:'a',name:'A',requires:['borte']};
+ assert.match(validateRoadmap({scenarios:[]},[orphan]),/ikke finnes lenger/);
+});
+
+test('Scenario avvises ved duplikat, manglende forutsetning og feil rekkefølge',()=>{
+ const a={...base,id:'a',name:'A'},b={...base,id:'b',name:'B',requires:['a']};
+ const items=[a,b];
+ assert.match(validateRoadmap({scenarios:[{id:'s',name:'S',order:['a','a']}]},items),/flere ganger/);
+ assert.match(validateRoadmap({scenarios:[{id:'s',name:'S',order:['b']}]},items),/ikke er med i scenarioet/);
+ assert.match(validateRoadmap({scenarios:[{id:'s',name:'S',order:['b','a']}]},items),/ligger før sin forutsetning/);
+ assert.equal(validateRoadmap({scenarios:[{id:'s',name:'S',order:['a','b']}]},items),'');
+});
+
+test('Dekning skiller key results uten tiltak fra tiltak uten key result, uten å gi feil',()=>{
+ const roadmap=seedRoadmap();
+ const result=coverage(roadmap,examples);
+ assert.deepEqual(result.keyResultsWithoutMeasures.map(k=>k.id),['kr-contacts']);
+ assert.deepEqual(result.measuresWithoutKeyResult.map(t=>t.id).sort(),['parental','telemetry']);
+ assert.equal(result.staleLinks.length,0);
+ assert.equal(validateRoadmap(roadmap,examples),'');
+});
+
+test('Uenighet mellom plassert horisont og beregnet landing er et signal, ikke en feil',()=>{
+ const late={...base,id:'late',name:'Late',horizon:'now',teams:[{...team,weeks:estimate(30,30,30)}]};
+ const signals=placementSignals(['late'],[late]);
+ assert.equal(signals.length,1);
+ assert.equal(signals[0].horizon,'now');
+ assert.ok(signals[0].landing>=3);
+ assert.equal(validateRoadmap({scenarios:[{id:'s',name:'S',order:['late']}]},[late]),'');
+});
+
+test('Eksempeldataene er et gyldig veikart og holder seg innenfor horisonten',()=>{
+ const roadmap=seedRoadmap();
+ assert.equal(validateRoadmap(roadmap,examples),'');
+ for(const s of roadmap.scenarios){
+  const {rows}=scenarioCurve(s.order,examples);
+  assert.equal(rows.length,s.order.length);
+  assert.ok(rows.every(r=>r.landing<HORIZON_MONTHS));
+ }
+});
