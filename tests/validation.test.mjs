@@ -1,0 +1,10 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {examples,validateIssue,validate} from '../dist/model.mjs';
+const draft=()=>structuredClone(examples[0]);
+test('Churn-orderfeil peker på de to relevante churn-feltene',()=>{const t=draft();t.low=.8;t.expected=.6;const e=validateIssue(t);assert.deepEqual(e.targets.map(x=>[x.scope,x.field]),[['main','low'],['main','expected']]);assert.match(e.message,/Churn-reduksjon/);assert.match(e.message,/0,8/);assert.equal(validate(t),e.message);});
+test('Forventet over høy markerer forventet og høy, ikke bemanningsfeltene',()=>{const t=draft();t.expected=2;assert.deepEqual(validateIssue(t).targets.map(x=>x.field),['expected','high']);});
+test('Teamfeil peker på stabil rad-ID og riktig anslagsgruppe',()=>{const t=draft();t.teams[1].weeks.expected=9;const e=validateIssue(t);assert.deepEqual(e.targets,[{scope:'team',id:t.teams[1].id,field:'weeks.expected'},{scope:'team',id:t.teams[1].id,field:'weeks.high'}]);assert.match(e.message,/Kundeservice, varighet/);});
+test('52-ukers grense kobler oppstart og høy varighet',()=>{const t=draft();t.teams[0].start=50;const e=validateIssue(t);assert.deepEqual(e.targets.map(x=>x.field),['start','weeks.high']);assert.match(e.message,/62 uker/);});
+test('Kostnad, kilde og risiko returnerer konkrete felt',()=>{const t=draft();t.costItems[0].low=2000000;assert.equal(validateIssue(t).targets[0].scope,'cost');t.costItems[0].low=0;t.sources=[{id:'source-test',title:'Kilde',type:'external',url:'javascript:alert(1)'}];assert.deepEqual(validateIssue(t).targets,[{scope:'source',id:'source-test',field:'url'}]);t.sources=[];t.risks[0].consequence='';assert.deepEqual(validateIssue(t).targets,[{scope:'risk',id:t.risks[0].id,field:'consequence'}]);});
+test('Korrigert skjema returnerer ingen feil',()=>{const t=draft();t.low=2;assert.ok(validateIssue(t));t.low=.2;assert.equal(validateIssue(t),null);});

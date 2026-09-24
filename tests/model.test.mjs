@@ -1,0 +1,10 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {calculate,validate,sortMeasures,examples} from '../dist/model.mjs';
+const t={...examples[0],customers:100000,reach:100,baseline:8,low:0,expected:.4,high:.8,value:8000,cost:1000000,setup:200000,costItems:undefined,teams:[]};
+test('Absolute prosentpoeng: 100 000 × 0,4 / 100 gir 400 kunder',()=>{const r=calculate(t);assert.equal(r.retained,400);assert.equal(r.gross,3200000);assert.equal(r.net,2000000);assert.equal(r.churn,7.6);assert.equal(r.cost,1200000);assert.ok(Math.abs(r.roi-166.6666666667)<1e-6);assert.equal(r.breakEven,.15)});
+test('Rekkevidde anvendes én gang, negative effekter beholdes',()=>{assert.equal(calculate({...t,reach:50}).retained,200);assert.equal(calculate(t,-.1).retained,-100);assert.equal(calculate(t,-.1).net,-2000000)});
+test('Null kostnad og ingen eksponering håndteres uten Infinity',()=>{assert.equal(calculate({...t,cost:0,setup:0}).roi,null);assert.equal(calculate({...t,reach:0}).breakEven,null);assert.equal(calculate({...t,reach:0}).net,-1200000)});
+test('Scenarioorden og fysisk mulige churn-verdier valideres',()=>{assert.equal(validate(t),'');assert.ok(validate({...t,high:9}));assert.ok(validate({...t,low:.5}));assert.ok(validate({...t,low:-93}));assert.ok(validate({...t,value:NaN}));assert.ok(validate({...t,customers:2.4}));assert.equal(validate({...t,low:-92,high:8}),'')});
+test('Alle eksempeltiltak er gyldige og forventet rangering er riktig',()=>{examples.forEach(t=>assert.equal(validate(t),''));assert.deepEqual(sortMeasures(examples,'expected').map(t=>t.id),['diagnostics','adoption','wifi','parental']);assert.equal(sortMeasures(examples,'confidence')[0].id,'diagnostics');for(const k of ['low','roi','retained'])assert.equal(sortMeasures(examples,k).length,4)});
+test('Evidens endrer ikke økonomiske resultater',()=>assert.deepEqual(calculate({...t,confidence:'hypothesis'}),calculate({...t,confidence:'randomized'})));
