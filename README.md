@@ -10,9 +10,10 @@ Kjør `npm start` fra denne mappen, eller `python3 -m http.server 4173 --bind 12
 
 - Fire illustrative tiltak, med legg til, rediger og slett.
 - Lavt, forventet og høyt scenario for beholdte kunder, bruttoverdi og nettoverdi.
-- Sortering etter forventet nettoverdi, lav nettoverdi, forventet ROI, beholdte kunder og evidensnivå.
+- Sortering etter forventet nettoverdi, lav nettoverdi, forventet ROI, beholdte kunder, evidensnivå og strategisk fit.
 - Interaktiv sensitivitetsgraf med nullpunkt og separat simulering.
 - Evidensnotat, segment, rekkevidde og baseline.
+- Strategisk fit (lav/middels/høy) med eget notat, vist som egen kolonne og badge atskilt fra evidensnivå. Endrer ikke nettoverdi eller ROI.
 - Redigerbare kostnadsposter med type (årlig/engang), grunnlag (kjent/anslag), lav/forventet/høy og kildenotat.
 - Redigerbare team med leveranse, bemanning og varighet i tre scenarioer, oppstart, ukesats og valg om kostnaden inngår.
 - Kostnadsfordeling, samlet ressursinnsats, gjennomføringsplan og teambelastning på tvers av tiltak.
@@ -48,6 +49,8 @@ Statisk publisering bruker innholdet i `dist/`. Ingen byggefase kreves.
 Kildelenker åpnes i ny fane. Kilder lagres bare i denne økten sammen med tiltakene. Ingen referanser eller eksempelstudier er fabrikkert; eksemplene har ingen registrerte kilder. Registrering av en kilde endrer ikke automatisk evidensnivå eller økonomiske tall.
 
 Risiko og avhengigheter endrer ikke økonomiske resultater automatisk. Åpne risikoer med høy konsekvens flagges uavhengig av sannsynlighet; dette er ingen beregnet risikoscore. Juster churn-, rekkevidde-, kostnads- og tidsanslag manuelt når risikovurderingen gir grunnlag for det. Eksempelrisikoene er illustrative. Manglende registrering betyr ikke at et tiltak er risikofritt.
+
+Strategisk fit (lav/middels/høy, med eget notat) er en egen, synlig vurdering av hvor godt tiltaket støtter valgt produktstrategi. Den kan brukes til sortering, men endrer aldri nettoverdi, ROI eller evidensnivå. Eksempelverdiene er illustrative.
 
 ## Prioriteringslab
 

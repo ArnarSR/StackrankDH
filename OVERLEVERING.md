@@ -20,7 +20,7 @@ Sist verifisert: 33 beståtte tester. Nettleserkontroll av validering, kundebase
 
 ## Levert funksjonalitet
 
-Porteføljen har flere redigerbare tiltak, lavt/forventet/høyt churn-utfall, brutto-/nettoverdi, ROI, sortering og sensitivitet. Kostnadsposter kan være årlige eller engangsbeløp, kjente eller anslåtte. Team har bemanning og varighet i tre scenarioer, oppstart og ukesats. Risikoer og avhengigheter har ansvar, konsekvens, status og håndtering. Kilderegisteret støtter dokumentlenker, kildetype, dato/versjon og hva kilden underbygger, samt kobling til effekt, kostnader, team og risiko.
+Porteføljen har flere redigerbare tiltak, lavt/forventet/høyt churn-utfall, brutto-/nettoverdi, ROI, strategisk fit (lav/middels/høy, med eget notat), sortering og sensitivitet. Kostnadsposter kan være årlige eller engangsbeløp, kjente eller anslåtte. Team har bemanning og varighet i tre scenarioer, oppstart og ukesats. Risikoer og avhengigheter har ansvar, konsekvens, status og håndtering. Kilderegisteret støtter dokumentlenker, kildetype, dato/versjon og hva kilden underbygger, samt kobling til effekt, kostnader, team og risiko.
 
 Produktets totale kundebase er en egen innstilling. Adresserbare kunder må ikke overstige basen. Ved senking av basen vises varsel med lenker til tiltak som må korrigeres. Skjemafeil markerer relevante felt, forklarer verdiene og flytter fokus til feilen ved lagring; retting stjeler ikke fokus.
 
@@ -31,7 +31,7 @@ Prioriteringslab sammenligner to utvalg og rekkefølger av arbeid med samme team
 1. Churn-reduksjon er absolutte prosentpoeng. Beholdte kunder = adresserbare kunder × rekkevidde/100 × reduksjon i pp/100. Ikke multipliser baseline eller produktets totale kundebase inn på nytt.
 2. Kundeverdi er inkrementelt dekningsbidrag innen samme 12-måneders horisont, ikke omsetning eller full CLV.
 3. Lav verdi kombinerer lav effekt og høy kostnad; høy verdi kombinerer høy effekt og lav kostnad. «Forventet» er hovedanslaget, ikke et sannsynlighetsvektet estimat. Scenarioer er ikke statistiske konfidensintervaller.
-4. Evidens og risiko er synlige vurderinger, ikke kunstige vekter i en samlet score. Alle eksempeldata og evidensnivåer er illustrative; ingen reelle effektstudier dokumenterer tallene.
+4. Evidens, risiko og strategisk fit er synlige vurderinger, ikke kunstige vekter i en samlet score. Alle eksempeldata, evidensnivåer og strategisk fit-vurderinger er illustrative; ingen reelle effektstudier dokumenterer tallene.
 5. Problemkostnad og mulig bruttopotensial er ikke garantert tiltaksverdi. Innsiktsarbeid får ikke automatisk gevinst i planregnskapet.
 6. Alternativkostnad gjelder et konkret alternativ. Ikke legg utsettelsesberegningen oppå planforskjellen; da dobbelttelles tapet.
 7. Teamkostnad er en økonomisk ressurskostnad, ikke nødvendigvis en ekstra utbetaling. Unngå å føre den på nytt i øvrige kostnadsposter.
