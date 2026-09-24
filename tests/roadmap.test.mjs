@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {estimate} from '../dist/resources.mjs';
 import {examples,scenario} from '../dist/model.mjs';
-import {HORIZON_MONTHS,schedule,scenarioCurve,compareScenarios,unlocks,coverage,placementSignals,seedRoadmap,validateRoadmap,validateRoadmapIssue} from '../dist/roadmap-model.mjs';
+import {HORIZON_MONTHS,schedule,scenarioCurve,compareScenarios,unlocks,coverage,placementSignals,seedRoadmap,validateRoadmap,validateRoadmapIssue,costOfDelay,suggestedOrder,breakEvenMonth} from '../dist/roadmap-model.mjs';
 
 // Tall valgt slik at gevinst og drift er delelig på 12; da kan likhet med porteføljen sjekkes eksakt.
 const base={...examples[0],id:'base',name:'Base',customers:100000,reach:100,baseline:10,low:0,expected:.4,high:.8,value:9000,
@@ -152,6 +152,43 @@ test('Uenighet mellom plassert horisont og beregnet landing er et signal, ikke e
  assert.equal(signals[0].horizon,'now');
  assert.ok(signals[0].landing>=3);
  assert.equal(validateRoadmap({scenarios:[{id:'s',name:'S',order:['late']}]},[late]),'');
+});
+
+test('Rekkefølgefeil i et scenario som ikke vises blokkerer ikke de andre',()=>{
+ const a={...base,id:'a',name:'A'},b={...base,id:'b',name:'B',requires:['a']};
+ const roadmap={scenarios:[{id:'ok',name:'OK',order:['a','b']},{id:'broken',name:'Broken',order:['b']}]};
+ assert.match(validateRoadmap(roadmap,[a,b]),/ikke er med i scenarioet/);
+ assert.equal(validateRoadmap(roadmap,[a,b],['ok']),'');
+ // Koblinger mellom tiltak sjekkes fortsatt globalt, uansett filter.
+ const cyclic=[{...a,requires:['b']},b];
+ assert.match(validateRoadmap({scenarios:[]},cyclic,['ok']),/Sirkulær avhengighet/);
+});
+
+test('CD3 er månedlig netto driftsbidrag delt på varighet',()=>{
+ const r=costOfDelay(built);
+ assert.equal(r.monthly,(scenario(built).gross-120000)/12);
+ assert.ok(Math.abs(r.months-4/(52/12))<1e-9);
+ assert.ok(Math.abs(r.cd3-r.monthly/r.months)<1e-9);
+ assert.equal(costOfDelay(base).cd3,null,'uten varighet er CD3 udefinert');
+});
+
+test('Foreslått rekkefølge sorterer på CD3, men aldri foran en forutsetning',()=>{
+ const slow={...built,id:'slow',name:'Slow',teams:[{...team,weeks:estimate(20,20,20)}]};
+ const fast={...built,id:'fast',name:'Fast'};
+ assert.deepEqual(suggestedOrder([slow,fast]),['fast','slow'],'høyest CD3 først');
+ // Enabler har CD3 = 0, men må likevel foran det den låser opp.
+ const enabler={...base,id:'enabler',name:'Enabler',customers:0,reach:0,low:0,expected:0,high:0,teams:[team]};
+ const blocked={...fast,id:'blocked',name:'Blocked',requires:['enabler']};
+ const order=suggestedOrder([blocked,enabler]);
+ assert.ok(order.indexOf('enabler')<order.indexOf('blocked'));
+});
+
+test('Nullpunkt er første måned kumulativ verdi ikke er negativ',()=>{
+ const {curve}=scenarioCurve(['built'],[built]);
+ const month=breakEvenMonth(curve);
+ assert.ok(curve[month].cumulative>=0);
+ assert.ok(month===0||curve[month-1].cumulative<0);
+ assert.equal(breakEvenMonth(scenarioCurve(['enabler'],[{...base,id:'enabler',customers:0,reach:0,low:0,expected:0,high:0}]).curve),null);
 });
 
 test('Eksempeldataene er et gyldig veikart og holder seg innenfor horisonten',()=>{

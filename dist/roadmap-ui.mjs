@@ -1,14 +1,17 @@
 import {scenario,horizons,evidence,strategicFit} from './model.mjs';
-import {seedRoadmap,keyResults,scenarioCurve,compareScenarios,unlocks,coverage,placementSignals,validateRoadmap,HORIZON_MONTHS} from './roadmap-model.mjs';
+import {seedRoadmap,keyResults,scenarioCurve,compareScenarios,unlocks,coverage,placementSignals,validateRoadmap,suggestedOrder,breakEvenMonth,HORIZON_MONTHS} from './roadmap-model.mjs';
 const $=id=>document.getElementById(id);
 const number=(v,d=0)=>new Intl.NumberFormat('nb-NO',{maximumFractionDigits:d,minimumFractionDigits:d}).format(v);
 const compact=v=>Math.abs(v)>=1000000?number(v/1000000,2)+' mill.':Math.abs(v)>=1000?number(v/1000,0)+' tusen':number(v);
 const money=v=>compact(v)+' kr';
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const uid=()=>crypto.randomUUID();
-let roadmap=seedRoadmap(),compare={a:'sc-platform',b:'sc-quick'},readItems=()=>[];
+let roadmap=seedRoadmap(),compare={a:'sc-platform',b:'sc-quick'},readItems=()=>[],armed=null;
 const items=()=>readItems();
 const measureName=id=>items().find(t=>t.id===id)?.name??id;
+// Sletting krever to klikk, som i tiltaksdialogen.
+const removeLabel=key=>armed===key?'Bekreft':'Fjern';
+function confirmRemove(key){if(armed===key){armed=null;return true}armed=key;renderStrategy();renderScenarios();return false;}
 
 export function renderRoadmap(){renderStrategy();renderBoard();renderScenarios();}
 
@@ -17,11 +20,11 @@ function renderStrategy(){
  $('objective-list').innerHTML=roadmap.objectives.map(o=>`<div class="objective" data-objective-id="${esc(o.id)}">
   <div class="objective-head"><label>Objective<input data-field="title" value="${esc(o.title)}" maxlength="140"></label>
   <button type="button" class="secondary" data-add-kr="${esc(o.id)}">＋ Key result</button>
-  <button type="button" class="danger" data-remove-objective="${esc(o.id)}">Fjern</button></div>
+  <button type="button" class="danger" data-remove-objective="${esc(o.id)}">${removeLabel('obj:'+o.id)}</button></div>
   ${o.keyResults.length?o.keyResults.map(k=>{const linked=items().filter(t=>(t.keyResultIds??[]).includes(k.id));
    return `<div class="key-result" data-kr-id="${esc(k.id)}"><label>Key result<input data-field="krTitle" value="${esc(k.title)}" maxlength="200"></label>
    <span class="kr-coverage${linked.length?'':' uncovered'}">${linked.length?esc(linked.map(t=>t.name).join(', ')):'Ingen tiltak'}</span>
-   <button type="button" class="danger" data-remove-kr="${esc(k.id)}">Fjern</button></div>`}).join(''):'<p class="field-help">Ingen key results ennå.</p>'}
+   <button type="button" class="danger" data-remove-kr="${esc(k.id)}">${removeLabel('kr:'+k.id)}</button></div>`}).join(''):'<p class="field-help">Ingen key results ennå.</p>'}
  </div>`).join('')||'<p class="field-help">Ingen objectives ennå. Legg til ett for å koble tiltakene til et målbilde.</p>';
  const c=coverage(roadmap,items());
  const line=(label,list)=>list.length?`<span><strong>${label}:</strong> ${esc(list.join(', '))}</span>`:'';
@@ -54,7 +57,7 @@ function renderBoard(){
 function scenarioById(id){return roadmap.scenarios.find(s=>s.id===id);}
 
 function renderScenarios(){
- const all=items(),error=validateRoadmap(roadmap,all);
+ const all=items(),error=validateRoadmap(roadmap,all,[compare.a,compare.b]);
  $('scenario-error').textContent=error;
  const options=sel=>roadmap.scenarios.map(s=>`<option value="${esc(s.id)}"${s.id===sel?' selected':''}>${esc(s.name)}</option>`).join('');
  $('scenario-pick-a').innerHTML=options(compare.a);$('scenario-pick-b').innerHTML=options(compare.b);
@@ -64,7 +67,8 @@ function renderScenarios(){
  const cmp=compareScenarios(a.order,b.order,all);
  renderCurve(cmp,a,b);
  $('scenario-columns').innerHTML=[[a,cmp.a,'a'],[b,cmp.b,'b']].map(([s,result,side])=>`<div class="scenario-column" data-scenario-id="${esc(s.id)}">
-  <div class="scenario-column-head"><span class="scenario-key scenario-${side}"></span><h3>${esc(s.name)}</h3><strong class="${result.net<0?'negative':'positive'}">${money(result.net)}</strong><small>kumulativt over ${HORIZON_MONTHS} måneder</small></div>
+  <div class="scenario-column-head"><span class="scenario-key scenario-${side}"></span><h3 class="scenario-title"><input data-scenario-name="${esc(s.id)}" value="${esc(s.name)}" maxlength="80" aria-label="Navn på scenario"></h3><button type="button" class="danger" data-remove-scenario="${esc(s.id)}">${removeLabel('sc:'+s.id)}</button>
+  <strong class="${result.net<0?'negative':'positive'}">${money(result.net)}</strong><small>kumulativt over ${HORIZON_MONTHS} måneder${breakEvenMonth(result.curve)===null?' · går ikke i null innen horisonten':' · i null fra måned '+breakEvenMonth(result.curve)}</small></div>
   <p class="field-help">${esc(s.note??'')}</p>
   ${s.order.length?s.order.map((id,i)=>{const row=result.rows[i];
    return `<div class="scenario-item"><span class="scenario-pos">${i+1}</span><div><strong>${esc(measureName(id))}</strong><small>${row.beyondHorizon?'Lander etter horisonten':`Lander måned ${row.landing} · ${row.effectMonths} mnd effekt`}</small></div>
@@ -79,18 +83,25 @@ function renderScenarios(){
 }
 
 function renderCurve(cmp,a,b){
+ const series=[{result:cmp.a,scenario:a,color:'#2d7a64',dash:''},{result:cmp.b,scenario:b,color:'#5a6fa8',dash:' stroke-dasharray="6 3"'}];
  const points=[...cmp.a.curve,...cmp.b.curve].map(m=>m.cumulative);
  const min=Math.min(0,...points),max=Math.max(0,...points),spread=(max-min)||1;
- const x=m=>70+m/(HORIZON_MONTHS-1)*470,y=v=>170-(v-min)/spread*140;
+ const x=m=>72+m/(HORIZON_MONTHS-1)*468,y=v=>212-(v-min)/spread*182;
  const path=curve=>curve.map((m,i)=>`${i?'L':'M'} ${x(m.month).toFixed(1)} ${y(m.cumulative).toFixed(1)}`).join(' ');
- let grid='';for(let i=0;i<=2;i++){const v=min+spread*i/2;grid+=`<line x1="70" y1="${y(v)}" x2="540" y2="${y(v)}" stroke="#e5ecef"${Math.abs(v)<.001?' stroke-dasharray="4 4"':''}/><text x="62" y="${y(v)+4}" text-anchor="end">${compact(v)}</text>`}
- let ticks='';for(const m of [0,6,12,18,23])ticks+=`<text x="${x(m)}" y="190" text-anchor="middle">${m===23?24:m}</text>`;
- const title=`Kumulativ nettoverdi over ${HORIZON_MONTHS} måneder. ${a.name}: ${money(cmp.a.net)}. ${b.name}: ${money(cmp.b.net)}.`;
- $('scenario-curve').innerHTML=`<div class="chart-wrap"><svg viewBox="0 0 560 205" role="img" aria-label="${esc(title)}"><text x="70" y="16">NOK, kumulativt</text>${grid}${ticks}
-  <text x="305" y="203" text-anchor="middle">Måneder fra felles start</text>
-  <path d="${path(cmp.a.curve)}" fill="none" stroke="#2d7a64" stroke-width="2.5"/>
-  <path d="${path(cmp.b.curve)}" fill="none" stroke="#5a6fa8" stroke-width="2.5" stroke-dasharray="6 3"/></svg>
-  <div class="curve-legend"><span><i class="scenario-key scenario-a"></i>${esc(a.name)} · ${money(cmp.a.net)}</span><span><i class="scenario-key scenario-b"></i>${esc(b.name)} · ${money(cmp.b.net)}</span><span class="curve-delta">Forskjell: ${money(cmp.delta)}</span></div></div>`;
+ let grid='';for(let i=0;i<=4;i++){const v=min+spread*i/4;grid+=`<line x1="72" y1="${y(v).toFixed(1)}" x2="540" y2="${y(v).toFixed(1)}" stroke="#eef2f4"/><text x="64" y="${(y(v)+4).toFixed(1)}" text-anchor="end">${compact(v)}</text>`}
+ if(min<0&&max>0)grid+=`<line x1="72" y1="${y(0).toFixed(1)}" x2="540" y2="${y(0).toFixed(1)}" stroke="#a3b6bc" stroke-dasharray="4 4"/>`;
+ let ticks='';for(const m of [0,6,12,18,23])ticks+=`<text x="${x(m).toFixed(1)}" y="232" text-anchor="middle">${m===23?24:m}</text>`;
+ // Markør der hvert tiltak lander: det er her gevinsten begynner å løpe.
+ const markers=series.map(({result,color})=>result.rows.filter(r=>!r.beyondHorizon).map(r=>
+  `<circle cx="${x(r.landing).toFixed(1)}" cy="${y(result.curve[r.landing].cumulative).toFixed(1)}" r="4.5" fill="white" stroke="${color}" stroke-width="2"><title>${esc(r.name)} lander måned ${r.landing}</title></circle>`).join('')).join('');
+ const breakEven=series.map(({result,color,scenario})=>{const m=breakEvenMonth(result.curve);
+  return m===null||m===0?'':`<line x1="${x(m).toFixed(1)}" y1="30" x2="${x(m).toFixed(1)}" y2="212" stroke="${color}" stroke-width="1" stroke-dasharray="2 4" opacity=".55"><title>${esc(scenario.name)} går i null i måned ${m}</title></line>`}).join('');
+ const nullText=({result})=>{const m=breakEvenMonth(result.curve);return m===null?'går ikke i null':'i null måned '+m};
+ const title=`Kumulativ nettoverdi over ${HORIZON_MONTHS} måneder. ${a.name}: ${money(cmp.a.net)}, ${nullText(series[0])}. ${b.name}: ${money(cmp.b.net)}, ${nullText(series[1])}.`;
+ $('scenario-curve').innerHTML=`<div class="chart-wrap curve-wrap"><svg viewBox="0 0 560 248" role="img" aria-label="${esc(title)}"><text x="72" y="18">NOK, kumulativt</text>${grid}${ticks}${breakEven}
+  <text x="306" y="246" text-anchor="middle">Måneder fra felles start</text>
+  ${series.map(({result,color,dash})=>`<path d="${path(result.curve)}" fill="none" stroke="${color}" stroke-width="2.5"${dash}/>`).join('')}${markers}</svg>
+  <div class="curve-legend">${series.map(({scenario,result},i)=>`<span><i class="scenario-key scenario-${i?'b':'a'}"></i>${esc(scenario.name)} · ${money(result.net)} · ${nullText(series[i])}</span>`).join('')}<span class="curve-delta">Forskjell: ${money(cmp.delta)}</span><span class="curve-hint">Ring = tiltak lander. Loddrett stiplet = planen går i null.</span></div></div>`;
 }
 
 // Felter som legges inn i tiltaksdialogen.
@@ -110,7 +121,15 @@ export function bindRoadmap(getItems,onSelect,onRerender){
  const refresh=()=>{renderRoadmap();onRerender?.()};
  $('vision').addEventListener('input',e=>{roadmap.vision.statement=e.target.value});
  $('add-objective').addEventListener('click',()=>{roadmap.objectives.push({id:uid(),title:'Nytt objective',note:'',keyResults:[]});refresh()});
- $('add-scenario').addEventListener('click',()=>{const s={id:uid(),name:'Nytt scenario',note:'',order:[]};roadmap.scenarios.push(s);compare.b=s.id;refresh()});
+ $('add-scenario').addEventListener('click',()=>{armed=null;const s={id:uid(),name:'Nytt scenario',note:'',order:[]};roadmap.scenarios.push(s);compare.b=s.id;refresh()});
+ $('suggest-order').addEventListener('click',()=>{
+  armed=null;
+  const order=suggestedOrder(items());
+  const existing=roadmap.scenarios.find(s=>s.id==='sc-cd3');
+  if(existing)existing.order=order;
+  else roadmap.scenarios.push({id:'sc-cd3',name:'Foreslått rekkefølge (CD3)',note:'Høyest månedlig driftsbidrag delt på varighet først, men aldri foran en forutsetning. Sekvenserer alle tiltak – den svarer på rekkefølge, ikke på hva som bør droppes. Totalen er derfor ikke sammenlignbar med en plan som inneholder færre tiltak. Rent økonomisk: evidens, risiko og strategisk fit er ikke vurdert.',order});
+  compare.b='sc-cd3';refresh();
+ });
  $('objective-list').addEventListener('input',e=>{
   const field=e.target.dataset.field;if(!field)return;
   const objective=roadmap.objectives.find(o=>o.id===e.target.closest('[data-objective-id]').dataset.objectiveId);
@@ -121,9 +140,9 @@ export function bindRoadmap(getItems,onSelect,onRerender){
  $('objective-list').addEventListener('click',e=>{
   const button=e.target.closest('button');if(!button)return;
   const {addKr,removeObjective,removeKr}=button.dataset;
-  if(addKr)roadmap.objectives.find(o=>o.id===addKr).keyResults.push({id:uid(),title:'Nytt key result',note:''});
-  if(removeObjective)roadmap.objectives=roadmap.objectives.filter(o=>o.id!==removeObjective);
-  if(removeKr)for(const o of roadmap.objectives)o.keyResults=o.keyResults.filter(k=>k.id!==removeKr);
+  if(addKr){armed=null;roadmap.objectives.find(o=>o.id===addKr).keyResults.push({id:uid(),title:'Nytt key result',note:''})}
+  if(removeObjective){if(!confirmRemove('obj:'+removeObjective))return;roadmap.objectives=roadmap.objectives.filter(o=>o.id!==removeObjective)}
+  if(removeKr){if(!confirmRemove('kr:'+removeKr))return;for(const o of roadmap.objectives)o.keyResults=o.keyResults.filter(k=>k.id!==removeKr)}
   refresh();
  });
  $('scenario-pick-a').addEventListener('change',e=>{compare.a=e.target.value;renderScenarios()});
@@ -132,8 +151,23 @@ export function bindRoadmap(getItems,onSelect,onRerender){
   const target=e.target.dataset.addTo;if(!target||!e.target.value)return;
   scenarioById(target).order.push(e.target.value);renderScenarios();
  });
+ // Navneendring oppdaterer velgerne direkte, så feltet ikke mister fokus av en re-render.
+ $('scenario-columns').addEventListener('input',e=>{
+  const id=e.target.dataset.scenarioName;if(!id)return;
+  scenarioById(id).name=e.target.value;
+  for(const sel of [$('scenario-pick-a'),$('scenario-pick-b')]){const option=[...sel.options].find(o=>o.value===id);if(option)option.textContent=e.target.value}
+ });
  $('scenario-columns').addEventListener('click',e=>{
   const button=e.target.closest('button');if(!button)return;
+  const remove=button.dataset.removeScenario;
+  if(remove){
+   if(!confirmRemove('sc:'+remove))return;
+   roadmap.scenarios=roadmap.scenarios.filter(s=>s.id!==remove);
+   const fallback=roadmap.scenarios[0]?.id??'';
+   if(compare.a===remove)compare.a=fallback;
+   if(compare.b===remove)compare.b=roadmap.scenarios.find(s=>s.id!==compare.a)?.id??fallback;
+   return renderScenarios();
+  }
   const s=scenarioById(button.dataset.scenario);if(!s)return;
   const index=s.order.indexOf(button.dataset.id);
   if(button.dataset.drop)s.order=s.order.filter(id=>id!==button.dataset.drop);

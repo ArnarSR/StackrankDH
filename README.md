@@ -17,7 +17,8 @@ Kjør `npm start` fra denne mappen, eller `python3 -m http.server 4173 --bind 12
 - Visjon, objectives og key results, med kobling fra tiltak til key results og en dekningsrapport som viser key results uten tiltak og tiltak uten key result.
 - Veikart i Now (0–3 mnd), Next (3–12 mnd) og Later (12+ mnd), med en egen kolonne for tiltak som ikke er plassert.
 - Forutsetninger mellom tiltak, og «låser opp»-verdi på tiltaket som forutsettes.
-- Scenariosammenligning over 24 måneder med kumulativ nettoverdikurve, redigerbar rekkefølge og forutsetningene synlig ved siden av.
+- Scenariosammenligning over 24 måneder med kumulativ nettoverdikurve, redigerbar rekkefølge og forutsetningene synlig ved siden av. Kurven markerer hvor hvert tiltak lander og når planen går i null.
+- Foreslått rekkefølge etter CD3 (månedlig driftsbidrag delt på varighet), som respekterer forutsetninger mellom tiltak.
 - Redigerbare kostnadsposter med type (årlig/engang), grunnlag (kjent/anslag), lav/forventet/høy og kildenotat.
 - Redigerbare team med leveranse, bemanning og varighet i tre scenarioer, oppstart, ukesats og valg om kostnaden inngår.
 - Kostnadsfordeling, samlet ressursinnsats, gjennomføringsplan og teambelastning på tvers av tiltak.
@@ -67,6 +68,14 @@ Scenarioene er ordnede lister. Arbeidet skjer sekvensielt, ett tiltak av gangen,
 **Veikartets tall er ikke porteføljens tall.** Porteføljen viser alltid ett helt driftsår per tiltak. Veikartet viser bare det som rekker å inntreffe innen 24 måneder i den valgte rekkefølgen — det kan bli både mindre (sen landing) og mer (over ett års drift innenfor horisonten). Begge vises ved siden av hverandre i tabellen under kurven. Forskjellen mellom to scenarioer er alternativkostnaden; ikke legg en egen utsettelsesberegning oppå. Summene er ikke korrigert for overlapp mellom tiltak.
 
 Plassering i Now/Next/Later er en intensjon og valideres ikke mot beregnet landing. Når de er uenige, vises det som et eget signal — det er en av de mest nyttige observasjonene verktøyet gir.
+
+### Foreslått rekkefølge (CD3)
+
+«Foreslå rekkefølge» sorterer tiltakene etter CD3: månedlig driftsbidrag (bruttogevinst minus årlig driftskostnad, delt på 12) delt på varighet i måneder. Høyest først, men et tiltak slipper aldri foran sine forutsetninger — uten den regelen ville enablere, som har CD3 lik null, havnet sist.
+
+CD3 er rent økonomisk. Evidens, risiko og strategisk fit inngår ikke og må vurderes ved siden av; forslaget er et utgangspunkt for diskusjon, ikke en beslutning.
+
+To forbehold er verdt å merke seg. Forslaget sekvenserer **alle** tiltak — det svarer på rekkefølge, ikke på hva som bør droppes. Og fordi planer kan ha ulikt omfang, er totalen for en plan med fem tiltak ikke sammenlignbar med en plan som inneholder to; sammenlign kurveformen og nullpunktet, ikke bare sluttsummen.
 
 ### Tre tidsmodeller
 

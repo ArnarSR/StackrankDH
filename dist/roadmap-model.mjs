@@ -53,6 +53,31 @@ export function compareScenarios(orderA,orderB,items,key='expected'){
  const a=scenarioCurve(orderA,items,key),b=scenarioCurve(orderB,items,key);
  return {a,b,delta:b.net-a.net,deltaCurve:a.curve.map((m,i)=>({month:m.month,delta:b.curve[i].cumulative-m.cumulative}))};
 }
+// CD3: månedlig netto driftsbidrag delt på varighet i måneder. Rent økonomisk –
+// evidens og strategisk fit inngår ikke, og skal vurderes ved siden av.
+export function costOfDelay(t,key='expected'){
+ const costCase=costCaseFor(key),{annual,duration}=costBreakdown(t,costCase);
+ const monthly=(scenario(t,key).gross-annual)/12;
+ const months=duration/WEEKS_PER_MONTH;
+ return {monthly,months,cd3:months>0?monthly/months:null};
+}
+// Foreslått rekkefølge: høyest CD3 først, men et tiltak slipper aldri foran sine
+// forutsetninger. Enablere har CD3 = 0 og ville ellers havnet sist.
+export function suggestedOrder(items,key='expected'){
+ const byId=new Map(items.map(t=>[t.id,t]));
+ const score=new Map(items.map(t=>[t.id,costOfDelay(t,key).cd3??0]));
+ const placed=[],done=new Set();
+ const place=(t,trail=new Set())=>{
+  if(done.has(t.id)||trail.has(t.id))return;
+  trail.add(t.id);
+  for(const req of t.requires??[])if(byId.has(req))place(byId.get(req),trail);
+  if(!done.has(t.id)){done.add(t.id);placed.push(t.id)}
+ };
+ for(const t of [...items].sort((a,b)=>score.get(b.id)-score.get(a.id)||a.name.localeCompare(b.name,'nb')))place(t);
+ return placed;
+}
+// Første måned der kumulativ nettoverdi er null eller positiv.
+export const breakEvenMonth=curve=>curve.find(m=>m.cumulative>=0)?.month??null;
 // Låst verdi: hva et tiltak gjør mulig. Summeres aldri inn i en total — verdiene overlapper i en kjede.
 export function unlocks(items,key='expected'){
  const byId=new Map(items.map(t=>[t.id,t]));
@@ -98,8 +123,10 @@ function findCycle(items){
  for(const t of items){const cycle=visit(t.id);if(cycle)return cycle}
  return null;
 }
-export function validateRoadmap(roadmap,items){return validateRoadmapIssue(roadmap,items)?.message??'';}
-export function validateRoadmapIssue(roadmap,items){
+export function validateRoadmap(roadmap,items,scenarioIds=null){return validateRoadmapIssue(roadmap,items,scenarioIds)?.message??'';}
+// scenarioIds avgrenser rekkefølgesjekken til de scenarioene som faktisk vises.
+// Koblinger mellom tiltak sjekkes alltid globalt: de ødelegger enhver rekkefølge.
+export function validateRoadmapIssue(roadmap,items,scenarioIds=null){
  const byId=new Map(items.map(t=>[t.id,t])),label=id=>byId.get(id)?.name??id;
  for(const t of items){
   const fail=(message,...fields)=>problem(message,'measure',t.id,fields);
@@ -109,7 +136,7 @@ export function validateRoadmapIssue(roadmap,items){
  const cycle=findCycle(items);
  if(cycle)return {message:`Sirkulær avhengighet: ${cycle.map(label).map(n=>`«${n}»`).join(' forutsetter ')}. Fjern én av koblingene.`,
   targets:cycle.slice(0,-1).map(id=>({scope:'measure',id,field:'requires'}))};
- for(const s of roadmap.scenarios??[]){
+ for(const s of (roadmap.scenarios??[]).filter(s=>!scenarioIds||scenarioIds.includes(s.id))){
   const order=s.order??[],position=new Map();
   const fail=(message,...fields)=>problem(`Scenario «${s.name}»: ${message}`,'scenario',s.id,fields);
   for(const [i,id] of order.entries()){
