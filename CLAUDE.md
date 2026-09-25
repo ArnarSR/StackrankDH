@@ -1,6 +1,6 @@
 # Churn Studio
 
-Les OVERLEVERING.md og README.md før endringer. Fortsett fra eksisterende prototype. Norsk grensesnitt og NOK. Bevar skillet mellom dokumentert effekt, hypoteser og kundeproblemets bruttopotensial. Ingen kunstig score som blander evidens og økonomi.
+Les AGENTS.md, OVERLEVERING.md og README.md før endringer. AGENTS.md har modellreglene, beslutninger som ikke skal omgjøres, og prioritert arbeidsliste. Fortsett fra eksisterende prototype. Norsk grensesnitt og NOK. Bevar skillet mellom dokumentert effekt, hypoteser og kundeproblemets bruttopotensial. Ingen kunstig score som blander evidens og økonomi.
 
 Start: npm start (krever Python 3). Tester: npm test (Node.js 18+). Ingen npm-avhengigheter eller byggefase. Server statiske filer fra dist/.
 
