@@ -72,6 +72,13 @@ Sist publiserte kildeversjon: `81e8f737d5ea0f4d66143ab2acafd69cadff9f3e`.
 
 Den portable ZIP-pakken inkluderer ikke Git-historikk, autentisering eller Sites-oppsett. Publiseringstilgang til dagens adresse overføres ikke med filene. Fortsett lokalt først. Avklar tilgjengelig publiseringsmetode for samme adresse, eller publiser `dist/` på en annen avtalt statisk vertstjeneste. Ikke be om eller gjenbruk kortlivede tilganger fra den tidligere samtalen.
 
+## Beslutninger som er tatt
+
+- **Lagring: lokalt, ikke i sky.** Besluttet 25.09.2026. Data lagres i brukerens egen nettleser, med eksport/import av JSON for sikkerhetskopi og flytting. Ekte skylagring med konto og delt database ble vurdert og valgt bort. Tre grunner ble avgjørende: GitHub Pages kan ikke kjøre backend, dataene er forretningssensitive og ville forlatt maskinen, og sikkerheten ville hvilt på tilgangsregler i en ekstern tjeneste der API-nøkkelen ligger åpent i nettleseren. **Ikke innfør innlogging eller en ekstern database uten at denne beslutningen tas om igjen eksplisitt.**
+- **Tidsmodell: laben er konvergert mot veikartet.** Besluttet 25.09.2026. Felles motor i `dist/timeline.mjs`. Porteføljens 12-månedersmodell står bevisst utenfor.
+- **GitHub-integrasjon: uten autentisering.** Forhåndsutfylte issue-URL-er, ikke tokenhåndtering.
+- **Kundeverdi: sammensatt, kappet ved 12 måneder.** Hindrer at full CLV smugles inn i strid med modellskille 2.
+
 ## Naturlige neste beslutninger – ikke vedtatt arbeidsliste
 
-Avklar ønsket lagring og samarbeid; kobling mellom portefølje og lab; felles kundebase og teamkapasitet; og hvordan usikkerhet og overlapp skal håndteres ved faktisk beslutning. Bevar eksisterende fungerende løsning mens dette vurderes. Unngå rammeverksbytte uten et konkret behov.
+Kobling mellom portefølje og lab (de har fortsatt hver sin datamodell og hver sin lagringsnøkkel); om ukesats, tapstabellen for kontekstbytte og horisonten skal samles i parametrene; og hvordan usikkerhet og overlapp skal håndteres ved faktisk beslutning. Bevar eksisterende fungerende løsning mens dette vurderes. Unngå rammeverksbytte uten et konkret behov.
