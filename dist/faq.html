@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="nb">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="Hva koster det å ha flere ting i gang samtidig? Kilder, tall og forbehold bak parallellitetskostnaden i Churn Studio."><title>Churn Studio · Parallellitet og kontekstbytte</title><link rel="icon" href="favicon.svg" type="image/svg+xml"><link rel="stylesheet" href="styles.css"></head>
+<body>
+<aside class="rail"><a class="brand" href="index.html" aria-label="Churn Studio"><span class="brandmark">c<span>→</span></span><span>churn<span class="brand-light">studio</span></span></a><div class="rail-label">ARBEIDSOMRÅDE</div><a class="nav" href="index.html"><span>▦</span> Tiltaksportefølje</a><a class="nav" href="index.html#roadmap"><span>▤</span> Veikart</a><a class="nav" href="index.html#scenarios"><span>∿</span> Scenarioer</a><a class="nav" href="prioritering.html"><span>⇄</span> Prioriteringslab</a><a class="nav active" href="#faq"><span>?</span> Parallellitet</a><div class="rail-bottom"><div class="avatar">PL</div><div>Produkt & innsikt<small>Bredbånd / Wi-Fi</small></div></div></aside>
+<div class="workspace"><header class="topbar"><span>Beslutningsstøtte <span class="slash">/</span> <strong>Parallellitet og kontekstbytte</strong></span><span class="period">◷ &nbsp; Kilder og forbehold</span></header>
+<main><section id="faq"><div class="heading"><div><div class="eyebrow">HVA KOSTER DET Å GJØRE ALT SAMTIDIG?</div><h1>Parallellitet og kontekstbytte</h1><p>Tallene verktøyet bruker, hvor de kommer fra, og hva de ikke kan si.</p></div></div>
+<div class="demo-note"><span class="badge neutral">JUSTERBAR ANTAKELSE</span><span>Verktøyet ganger ikke i stillhet med ett tall. Faktoren er en antakelse du kan endre.</span></div>
+
+<section class="panel faq-panel"><div class="panel-head"><div><h2>Kort fortalt</h2></div></div><div class="faq-body">
+<p>Når et scenario har en WIP-grense over 1, kjører flere tiltak samtidig. Da starter arbeidet tidligere, men hvert enkelt tiltak tar lenger tid fordi oppmerksomheten deles. Verktøyet modellerer dette som en <strong>gjennomstrømningsfaktor</strong>: effektiv varighet = varighet ÷ (1 − tap).</p>
+<p>Det er én ting du bør vite før du stoler på tallet: <strong>forskningen er ikke enig med seg selv.</strong> Den mest siterte kilden er en erfaringsregel forfatteren selv ikke kaller en måling, og den best målte programvaredataen peker i en annen retning enn folk flest tror. Derfor er tapstabellen noe du kan justere, ikke en fasit vi har bakt inn.</p>
+</div></section>
+
+<section class="panel faq-panel"><div class="panel-head"><div><h2>Tallene verktøyet bruker</h2><p>Default er Weinbergs tabell. Kolonnen til høyre er konsekvensen, ikke en egen kilde.</p></div></div><div class="table-scroll"><table class="resource-table"><thead><tr><th>Samtidige tiltak</th><th>Tap av produktiv tid</th><th>Effektiv varighet per tiltak</th><th>Gjennomstrømning mot én av gangen</th></tr></thead><tbody>
+<tr><th scope="row">1</th><td>0 %</td><td>× 1,00</td><td>1,00×</td></tr>
+<tr><th scope="row">2</th><td>20 %</td><td>× 1,25</td><td>1,60×</td></tr>
+<tr><th scope="row">3</th><td>40 %</td><td>× 1,67</td><td class="positive">1,80× — høyest</td></tr>
+<tr><th scope="row">4</th><td>60 %</td><td>× 2,50</td><td>1,60×</td></tr>
+<tr><th scope="row">5</th><td>75 %</td><td>× 4,00</td><td class="negative">1,25×</td></tr>
+</tbody></table></div><div class="faq-body">
+<p>Legg merke til formen: gjennomstrømningen stiger, topper seg rundt tre samtidige, og faller igjen. Fire parallelle tiltak gir omtrent samme gjennomstrømning som to, og fem er verre enn begge. Det er ikke noe vi har lagt inn med vilje — det følger av Weinbergs egne tall når man regner dem om til gjennomstrømning.</p>
+<p>Over fem samtidige brukes tapet for fem videre. Weinbergs tabell stopper der, og vi gjetter ikke.</p>
+</div></section>
+
+<section class="panel faq-panel"><div class="panel-head"><div><h2>Kildene</h2><p>Merket med samme evidensvokabular som resten av verktøyet.</p></div></div><div class="faq-body">
+
+<article class="faq-source"><div class="faq-source-head"><span class="badge evidence-hypothesis">Hypotese / erfaringsregel</span><h3>Weinberg (1991)</h3></div>
+<p><em>Quality Software Management, Vol. 1: Systems Thinking</em>, Dorset House, s. 284–285.</p>
+<p><strong>Sier:</strong> Med to samtidige prosjekter går 20 % av tiden til kontekstbytte, med tre 40 %, med fire 60 %.</p>
+<p><strong>Sier ikke:</strong> At dette er målt. Weinberg presenterer det som en erfaringsregel, ikke som et laboratorieresultat. Tallene er likevel de mest siterte på feltet, i praksis fordi ingenting mer stringent har erstattet dem.</p>
+<p class="faq-use">Brukes som default i verktøyet, nettopp fordi den er den vanligste referansen — ikke fordi den er den best dokumenterte.</p></article>
+
+<article class="faq-source"><div class="faq-source-head"><span class="badge evidence-randomized">Randomisert eksperiment</span><h3>Mark, Gudith &amp; Klocke (2008)</h3></div>
+<p><em>The Cost of Interrupted Work: More Speed and Stress.</em> Proceedings of CHI 2008, s. 107–110. <a href="https://ics.uci.edu/~gmark/chi08-mark.pdf" target="_blank" rel="noopener noreferrer">PDF ↗</a></p>
+<p><strong>Sier:</strong> Deltakere som ble avbrutt fullførte oppgavene <strong>raskere</strong> enn de som ikke ble avbrutt, uten målbar kvalitetsforskjell — men med vesentlig mer stress, frustrasjon, tidspress og opplevd anstrengelse.</p>
+<p><strong>Sier ikke:</strong> At avbrudd er gratis. Kostnaden dukket opp som belastning på mennesker, ikke som tapt tid i dette oppsettet. Studien måler dessuten <em>avbrudd i en oppgave</em>, ikke det å ha flere prosjekter gående over uker.</p>
+<p class="faq-use">Grunnen til at verktøyet ikke påstår at tapet nødvendigvis viser seg som forsinkelse. Det kan like gjerne vise seg som slitasje, og det fanger ingen kurve opp.</p></article>
+
+<article class="faq-source"><div class="faq-source-head"><span class="badge evidence-observational">Observasjon</span><h3>Vasilescu et al. (2016)</h3></div>
+<p><em>The Sky Is Not the Limit: Multitasking Across GitHub Projects.</em> Proceedings of ICSE 2016. <a href="https://web.cs.ucdavis.edu/~filkov/papers/icse2016focus.pdf" target="_blank" rel="noopener noreferrer">PDF ↗</a></p>
+<p><strong>Sier:</strong> På store mengder faktiske GitHub-data henger <strong>moderat</strong> multitasking sammen med <em>høyere</em> produktivitet, ikke lavere. Men det finnes et punkt med avtakende utbytte, der gevinsten blir spist opp av kognitiv overbelastning.</p>
+<p><strong>Sier ikke:</strong> At sammenhengen er årsak. Dette er observasjonsdata — produktive utviklere kan tenkes å påta seg flere prosjekter, snarere enn at flere prosjekter gjør dem produktive.</p>
+<p class="faq-use">Den viktigste korreksjonen til «multitasking er alltid tap». Formen på kurven — opp, topp, ned — er grunnen til at vi viser gjennomstrømning og ikke bare tap.</p></article>
+
+<article class="faq-source"><div class="faq-source-head"><span class="badge evidence-observational">Observasjon</span><h3>Tregubov et al. (2017)</h3></div>
+<p><em>Impact of Task Switching and Work Interruptions on Software Development Processes.</em> Proceedings of ICSSP 2017.</p>
+<p><strong>Sier:</strong> Utviklere som jobber i flere prosjekter bruker en betydelig del av arbeidstiden på kontekstbytte, og det påvirker treffsikkerheten i kostnads- og tidsestimater.</p>
+<p><strong>Sier ikke:</strong> En bestemt prosentsats som kan overføres til et hvilket som helst team.</p>
+<p class="faq-use">Støtter at effekten er reell og verdt å modellere, uten å gi et tall vi kan bruke direkte.</p></article>
+
+</div></section>
+
+<section class="panel faq-panel"><div class="panel-head"><div><h2>Hva kildene er uenige om</h2></div></div><div class="faq-body">
+<p>Weinberg beskriver et bratt, lineært tap. ICSE-dataene beskriver en omvendt U der litt parallellitet er <em>bedre</em> enn ingen. CHI-eksperimentet finner ikke tapt tid i det hele tatt, men finner menneskelig belastning.</p>
+<p>De tre er ikke nødvendigvis i konflikt — de måler ulike ting på ulike tidsskalaer: minutter med avbrudd, uker med prosjektbytte, og en erfaren praktikers inntrykk av team over år. Men de kan ikke slås sammen til ett tall uten å miste nettopp det som skiller dem.</p>
+<p><strong>Derfor:</strong> verktøyet bruker Weinberg som utgangspunkt fordi det er den kjente referansen, viser deg gjennomstrømningen så du ser den omvendte U-en, og lar deg endre tapstabellen når du har bedre tall for ditt eget team. Om dere måler noe annet hos dere, er det tallet bedre enn alle fire kildene her.</p>
+</div></section>
+
+<section class="panel faq-panel"><div class="panel-head"><div><h2>Forbehold i modellen</h2></div></div><div class="faq-body">
+<ul class="faq-list">
+<li>Tapet bruker scenarioets WIP-innstilling som en konstant. Verktøyet modellerer ikke faktisk samtidighet time for time.</li>
+<li>Tapet treffer kalendertid, ikke kostnad. Et tiltak blir ikke dyrere av å gå saktere i denne modellen — det lander senere, og rekker dermed færre effektmåneder innen horisonten.</li>
+<li>Kostnaden ved kontekstbytte rammer sannsynligvis ikke alt arbeid likt. Utforskende arbeid med lang oppvarming taper trolig mer enn rutinepreget arbeid. Modellen skiller ikke.</li>
+<li>Menneskelig belastning er ikke modellert i det hele tatt. CHI-studien antyder at det er der kostnaden faktisk kan havne.</li>
+<li>Tallene i eksempeldataene er illustrative, som ellers i verktøyet.</li>
+</ul>
+</div></section>
+
+<p class="overlap">ⓘ Denne siden er referanseinnhold og henter ingen data fra arbeidsflaten din.</p>
+</section>
+<footer>Churn Studio <span>Prototype · Endringer gjelder denne økten og nullstilles ved ny innlasting.</span></footer></main></div>
+</body></html>

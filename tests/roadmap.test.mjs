@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {estimate} from '../dist/resources.mjs';
 import {examples,scenario} from '../dist/model.mjs';
-import {HORIZON_MONTHS,schedule,scenarioCurve,compareScenarios,unlocks,coverage,placementSignals,seedRoadmap,validateRoadmap,validateRoadmapIssue,costOfDelay,suggestedOrder,breakEvenMonth} from '../dist/roadmap-model.mjs';
+import {HORIZON_MONTHS,schedule,scenarioCurve,compareScenarios,unlocks,coverage,placementSignals,seedRoadmap,validateRoadmap,validateRoadmapIssue,costOfDelay,suggestedOrder,breakEvenMonth,throughput,switchingLoss,focusFactor,defaultSwitchingLoss} from '../dist/roadmap-model.mjs';
 
 // Tall valgt slik at gevinst og drift er delelig på 12; da kan likhet med porteføljen sjekkes eksakt.
 const base={...examples[0],id:'base',name:'Base',customers:100000,reach:100,baseline:10,low:0,expected:.4,high:.8,value:9000,
@@ -189,6 +189,58 @@ test('Nullpunkt er første måned kumulativ verdi ikke er negativ',()=>{
  assert.ok(curve[month].cumulative>=0);
  assert.ok(month===0||curve[month-1].cumulative<0);
  assert.equal(breakEvenMonth(scenarioCurve(['enabler'],[{...base,id:'enabler',customers:0,reach:0,low:0,expected:0,high:0}]).curve),null);
+});
+
+test('WIP 1 gir nøyaktig den sekvensielle planen, uten tap',()=>{
+ const a={...built,id:'a',name:'A'},b={...built,id:'b',name:'B'};
+ const plain=schedule([a,b],'expected');
+ const explicit=schedule([a,b],'expected',{wip:1});
+ assert.deepEqual(plain,explicit);
+ assert.equal(plain[0].effectiveDuration,plain[0].duration);
+ assert.equal(plain[1].startWeek,plain[0].endWeek,'sekvensielt');
+});
+
+test('Parallelle baner starter tidligere, men hvert tiltak tar lenger tid',()=>{
+ const a={...built,id:'a',name:'A'},b={...built,id:'b',name:'B'};
+ const parallel=schedule([a,b],'expected',{wip:2});
+ assert.equal(parallel[0].startWeek,0);
+ assert.equal(parallel[1].startWeek,0,'begge starter med en gang');
+ assert.equal(parallel[0].lane!==parallel[1].lane,true,'ulike baner');
+ // 20 % tap ved to samtidige: 4 uker blir 5.
+ assert.ok(Math.abs(parallel[0].effectiveDuration-4/0.8)<1e-9);
+ assert.ok(parallel[0].effectiveDuration>parallel[0].duration);
+});
+
+test('En forutsetning holder igjen selv når det finnes ledig bane',()=>{
+ const a={...built,id:'a',name:'A'},b={...built,id:'b',name:'B',requires:['a']};
+ const plan=schedule([a,b],'expected',{wip:3});
+ assert.equal(plan[0].startWeek,0);
+ assert.equal(plan[1].startWeek,plan[0].endWeek,'B venter på A');
+});
+
+test('Gjennomstrømningen topper seg rundt tre samtidige og faller igjen',()=>{
+ const values=[1,2,3,4,5].map(n=>throughput(n));
+ assert.deepEqual(values.map(v=>+v.toFixed(2)),[1,1.6,1.8,1.6,1.25]);
+ const best=values.indexOf(Math.max(...values))+1;
+ assert.equal(best,3,'optimum ved tre samtidige med Weinberg-tallene');
+ assert.ok(values[4]<values[2],'fem er dårligere enn tre');
+});
+
+test('Tapstabellen kan overstyres, og verdier utenfor tabellen bruker siste kjente',()=>{
+ const none={1:0,2:0,3:0};
+ assert.equal(switchingLoss(3,none),0);
+ assert.equal(focusFactor(3,none),1);
+ assert.equal(schedule([built],'expected',{wip:3,losses:none})[0].effectiveDuration,4);
+ assert.equal(switchingLoss(9),defaultSwitchingLoss[5],'utenfor tabellen brukes siste verdi');
+ assert.equal(switchingLoss(0),0,'null behandles som én');
+});
+
+test('For mye parallelt gjør planen mindre verdt innen horisonten',()=>{
+ const many=['a','b','c','d'].map(id=>({...built,id,name:id.toUpperCase()}));
+ const focused=scenarioCurve(many.map(t=>t.id),many,'expected',{wip:1});
+ const scattered=scenarioCurve(many.map(t=>t.id),many,'expected',{wip:4});
+ assert.ok(scattered.rows[3].landing<focused.rows[3].landing,'siste tiltak lander tidligere');
+ assert.ok(scattered.rows[0].landing>focused.rows[0].landing,'men det første lander senere');
 });
 
 test('Eksempeldataene er et gyldig veikart og holder seg innenfor horisonten',()=>{

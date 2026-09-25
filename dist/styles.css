@@ -58,6 +58,73 @@
 .scenario-pickers label{display:grid;gap:7px;font-size:12px;color:var(--muted)}
 .scenario-key{display:inline-block;width:14px;height:3px;border-radius:2px;background:#2d7a64;vertical-align:3px}
 .scenario-key.scenario-b{background:#5a6fa8}
+.roadmap-card{cursor:grab}
+.roadmap-card.dragging{opacity:.45;cursor:grabbing}
+.roadmap-column.drop-target{outline:2px dashed #6ba793;outline-offset:2px;background:#f1f7f5}
+.card-horizon{display:grid;gap:4px;font-size:10px;color:#5d6e76}
+.card-horizon select{padding:5px 22px 5px 7px;font-size:11px;border-radius:5px}
+.wip-control{display:grid;gap:7px;padding:11px;background:#f7f9fa;border:1px solid #eaf0f2;border-radius:6px}
+.wip-control label{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:12px;color:#5d6e76}
+.wip-control input{width:74px;border:1px solid #cfdce1;border-radius:6px;padding:7px;font:inherit;font-size:14px;background:white;color:var(--ink)}
+.wip-readout{font-size:11px;color:#5d6e76;line-height:1.55}
+.wip-readout a{display:block;margin-top:3px;color:#24694f;text-decoration:underline;text-underline-offset:3px}
+/* Dokumentuttrykk: felt ser ut som tekst til de berøres. */
+.objective input,.key-result input,.vision-field textarea{border-color:transparent;background:transparent}
+.objective input:hover,.key-result input:hover,.vision-field textarea:hover{border-color:#dbe4e8;background:white}
+.objective input:focus,.key-result input:focus,.vision-field textarea:focus{border-color:#8fb3a6;background:white}
+.objective>.objective-head>label>input{font-family:Manrope,sans-serif;font-weight:750;font-size:16px;letter-spacing:-.3px}
+.objective .danger,.key-result .danger{opacity:0;transition:opacity .12s}
+.objective:hover .danger,.objective:focus-within .danger,.key-result:hover .danger,.key-result:focus-within .danger,.danger:focus{opacity:1}
+.coverage-report{background:#fffaf0;border-color:#f0e4cc}
+.roster{margin-top:22px}
+.roster-body{padding:0 24px 22px;display:grid;grid-template-columns:minmax(0,1fr);gap:16px}
+.role-row{display:grid;grid-template-columns:1.3fr .7fr 1.6fr auto;gap:12px;align-items:end;padding:12px;border:1px solid var(--line);border-radius:8px;background:#fbfcfd}
+.role-row label{display:grid;gap:6px;font-size:11px;color:#5d6e76;min-width:0}
+.role-row input{border:1px solid #cfdce1;border-radius:6px;padding:9px;font:inherit;font-size:14px;width:100%;background:white;color:var(--ink)}
+.role-row .danger{font-size:12px;padding:9px 8px}
+.github-settings{display:grid;grid-template-columns:1fr 1fr;gap:14px;padding:15px;border:1px solid var(--line);border-radius:8px;background:#f8fafb}
+.github-settings>div:first-child,.github-settings>p{grid-column:1/-1}
+.github-settings h3{font-size:15px}
+.github-settings p{font-size:12px;margin-top:5px;line-height:1.6}
+.github-settings label{display:grid;gap:6px;font-size:12px;color:#5d6e76}
+.github-settings input{border:1px solid #cfdce1;border-radius:6px;padding:9px;font:inherit;font-size:14px;width:100%;background:white;color:var(--ink)}
+.github-settings code{background:#e9eef1;border-radius:3px;padding:1px 4px;font-size:12px}
+.util-bar{background:#e9eef1;border-radius:3px;height:7px;width:110px;overflow:hidden}
+.util-bar i{display:block;height:100%;background:#3f8a72;border-radius:3px}
+.util-bar i.over{background:#b1584f}
+#capacity-rows-roles th small{display:block;font-weight:400;font-size:11px;color:#5d6e76;margin-top:3px}
+.measure-roles{display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:0 24px 4px}
+.roles-label{font-size:12px;color:#5d6e76}
+.role-chip{background:#eef3f1;border:1px solid #dcE7e2;border-radius:6px;padding:6px 9px;font-size:12px;font-weight:600;color:#33604f}
+.role-chip small{display:block;font-weight:400;font-size:10px;color:#5d6e76;margin-top:2px}
+.task-orphans:not(:empty){margin:12px 24px;padding:12px;background:#fff1ec;color:#8f3a30;border-radius:6px;font-size:12px;line-height:1.6}
+#task-list{display:grid;gap:12px;padding:12px 24px 0}
+.task-group{border:1px solid var(--line);border-radius:8px;padding:13px;background:#fbfcfd}
+.task-group-head{display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin-bottom:10px}
+.task-group-head h4{margin:0;font-size:14px;font-family:Manrope,sans-serif;font-weight:750}
+.task-group-head small{width:100%;font-size:11px;color:#5d6e76}
+.task-row{display:flex;align-items:center;gap:11px;padding:9px 10px;background:white;border:1px solid var(--line);border-radius:6px;margin-top:7px}
+.task-row>div{flex:1;min-width:0}
+.task-row strong{display:block;font-size:13px;font-weight:650;overflow-wrap:anywhere}
+.task-row small{font-size:11px;color:#5d6e76}
+.task-row a{font-size:12px;color:#24694f;text-decoration:underline;text-underline-offset:3px;white-space:nowrap}
+.task-hint{font-size:11px;color:#5d6e76;white-space:nowrap}
+.task-status{font-size:10px;font-weight:600;border-radius:4px;padding:4px 7px;white-space:nowrap}
+.status-todo{background:#eef2f5;color:#55686f}
+.status-doing{background:#fff0d7;color:#8d6427}
+.status-done{background:#e7f4ee;color:#287963}
+@media(max-width:900px){.role-row{grid-template-columns:1fr 1fr}.role-row .role-skills{grid-column:1/-1}.github-settings{grid-template-columns:1fr}}
+.faq-panel{margin-bottom:20px}
+.faq-body{padding:0 24px 22px;display:grid;gap:14px;max-width:900px}
+.faq-body p{font-size:14px;line-height:1.65}
+.faq-list{margin:0;padding-left:20px;display:grid;gap:9px}
+.faq-list li{font-size:14px;line-height:1.6;color:var(--muted)}
+.faq-source{border-left:2px solid #d1e4db;padding:2px 0 2px 16px;display:grid;gap:9px}
+.faq-source-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.faq-source-head h3{font-size:16px}
+.faq-source a{color:#24694f;text-decoration:underline;text-underline-offset:3px}
+.faq-use{background:#f5f8f7;border-radius:6px;padding:11px 13px;font-size:13px;color:#42615a}
+.faq-panel .resource-table th[scope=row]{font-weight:650}
 .panel-head-actions{display:flex;gap:9px;flex-wrap:wrap}
 .curve-wrap svg{height:270px}
 .scenario-title{flex:1;min-width:120px;margin:0}

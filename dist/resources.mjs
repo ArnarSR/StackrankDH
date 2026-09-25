@@ -64,6 +64,21 @@ export function resourcePortfolio(items) {
   }
   return [...groups.values()].sort((a,b)=>b.expected-a.expected).map(g=>({...g,measures:g.measures.size}));
 }
+// Teamnavnene i malene under speiler rollene i seedRoster().
+const seedRoleIds={'Plattform & nettverk':'role-platform','Wi-Fi & CPE':'role-wifi','App & digitale flater':'role-app','Kundeopplevelse':'role-cx','Kundeservice':'role-service','Sikkerhet & personvern':'role-security'};
+// Illustrative oppgaver. Ingen issue-lenker er fabrikkert; de legges inn av brukeren.
+const seedTasks={
+ diagnostics:[
+  {id:'diagnostics-task-0',teamId:'diagnostics-team-0',roleId:'',title:'Regler for feildeteksjon',estimateWeeks:7,status:'doing',issueUrl:'',note:'Illustrativt estimat.'},
+  {id:'diagnostics-task-1',teamId:'diagnostics-team-0',roleId:'',title:'Automatisert feilretting',estimateWeeks:9,status:'todo',issueUrl:'',note:'Illustrativt estimat.'},
+  {id:'diagnostics-task-2',teamId:'diagnostics-team-1',roleId:'',title:'Pilotprosess og opplæring',estimateWeeks:3,status:'todo',issueUrl:'',note:'Illustrativt estimat.'}
+ ],
+ telemetry:[
+  {id:'telemetry-task-0',teamId:'telemetry-team-0',roleId:'',title:'Datamodell for telemetri',estimateWeeks:8,status:'doing',issueUrl:'',note:'Illustrativt estimat.'},
+  {id:'telemetry-task-1',teamId:'telemetry-team-0',roleId:'',title:'Innsamling og lagring',estimateWeeks:10,status:'todo',issueUrl:'',note:'Illustrativt estimat.'},
+  {id:'telemetry-task-2',teamId:'telemetry-team-0',roleId:'role-security',title:'Tilgangsstyring og personvern',estimateWeeks:6,status:'todo',issueUrl:'',note:'Illustrativt estimat. Krever en annen rolle enn resten av teamraden.'}
+ ]
+};
 export function seedResources(t,index) {
   const annual=t.cost,once=t.setup;
   const templates=[
@@ -76,5 +91,5 @@ export function seedResources(t,index) {
   return {...t,sources:[],effectSourceId:'',risks:seedRisks(t,index),costItems:[
     {id:`${t.id}-annual`,name:'Tjeneste, lisens og løpende drift',kind:'annual',basis:'estimate',...estimate(annual*.8,annual,annual*1.25),note:'Illustrativt årsbeløp. Intern teaminnsats er ikke inkludert.'},
     {id:`${t.id}-setup`,name:'Etablering hos leverandør',kind:'once',basis:'known',...estimate(once),note:'Illustrativt kjent beløp, ikke et faktisk tilbud.'}
-  ],teams:templates[index].map(([name,role,fl,fe,fh,wl,we,wh,start,rate],i)=>({id:`${t.id}-team-${i}`,name,role,fte:estimate(fl,fe,fh),weeks:estimate(wl,we,wh),start,rate,includeCost:true,note:'Illustrative bemannings- og tidsanslag.'}))};
+  ],teams:templates[index].map(([name,role,fl,fe,fh,wl,we,wh,start,rate],i)=>({id:`${t.id}-team-${i}`,name,role,roleId:seedRoleIds[name]??'',fte:estimate(fl,fe,fh),weeks:estimate(wl,we,wh),start,rate,includeCost:true,note:'Illustrative bemannings- og tidsanslag.'})),tasks:seedTasks[t.id]??[]};
 }

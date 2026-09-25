@@ -17,23 +17,45 @@ export const seedRoadmap=()=>({
  scenarios:[
   {id:'sc-platform',name:'Plattform først',note:'Bygger telemetri før diagnostikk, og tar adopsjon etterpå.',order:['telemetry','diagnostics','adoption']},
   {id:'sc-quick',name:'Rask gevinst først',note:'Hopper over plattformarbeidet og tar det som kan leveres raskt.',order:['adoption','wifi']}]});
-// Sekvensielt: ett tiltak av gangen, i oppgitt rekkefølge. Kalendertid hentes fra teamdataene.
-export function schedule(list,key='expected'){
- const costCase=costCaseFor(key);let week=0;
+// Andel produktiv tid som går tapt når N ting er i gang samtidig. Weinberg (1991)
+// er en erfaringsregel, ikke en måling – se faq.html. Tallene er ment å justeres.
+export const defaultSwitchingLoss={1:0,2:.2,3:.4,4:.6,5:.75};
+export const switchingLoss=(wip,losses=defaultSwitchingLoss)=>{
+ const n=Math.max(1,Math.round(wip||1));
+ if(losses[n]!==undefined)return losses[n];
+ const keys=Object.keys(losses).map(Number).sort((a,b)=>a-b);
+ return losses[keys[keys.length-1]]??0;
+};
+export const focusFactor=(wip,losses)=>Math.max(1e-6,1-switchingLoss(wip,losses));
+// Gjennomstrømning relativt til å gjøre én ting av gangen. Med Weinberg-tallene
+// topper den seg rundt tre samtidige og faller igjen – en omvendt U.
+export const throughput=(wip,losses)=>Math.max(1,Math.round(wip||1))*focusFactor(wip,losses);
+// wip baner i parallell. Et tiltak starter når en bane er ledig, men aldri før
+// forutsetningene er ferdige. Tapet bruker wip-innstillingen som konstant, ikke
+// faktisk samtidighet time for time.
+export function schedule(list,key='expected',{wip=1,losses=defaultSwitchingLoss}={}){
+ const costCase=costCaseFor(key);
+ const lanes=Array(Math.max(1,Math.round(wip||1))).fill(0);
+ const factor=focusFactor(wip,losses);
+ const finished=new Map();
  return list.map(t=>{
   const {duration}=costBreakdown(t,costCase);
-  const startWeek=week,endWeek=week+duration;week=endWeek;
+  const stretched=duration/factor;
+  const ready=Math.max(0,...(t.requires??[]).map(id=>finished.get(id)??0));
+  const lane=lanes.indexOf(Math.min(...lanes));
+  const startWeek=Math.max(lanes[lane],ready),endWeek=startWeek+stretched;
+  lanes[lane]=endWeek;finished.set(t.id,endWeek);
   const startMonth=Math.floor(startWeek/WEEKS_PER_MONTH),landing=Math.ceil(endWeek/WEEKS_PER_MONTH);
-  return {id:t.id,name:t.name,duration,startWeek,endWeek,startMonth,landing,
+  return {id:t.id,name:t.name,duration,effectiveDuration:stretched,lane,startWeek,endWeek,startMonth,landing,
    workMonths:Math.max(1,landing-startMonth),
    effectMonths:Math.max(0,HORIZON_MONTHS-landing),
    beyondHorizon:landing>=HORIZON_MONTHS};
  });
 }
-export function scenarioCurve(order,items,key='expected'){
+export function scenarioCurve(order,items,key='expected',options={}){
  const costCase=costCaseFor(key);
  const list=(order??[]).map(id=>items.find(t=>t.id===id)).filter(Boolean);
- const plan=schedule(list,key);
+ const plan=schedule(list,key,options);
  const months=Array.from({length:HORIZON_MONTHS},()=>({gross:0,operating:0,labor:0,once:0}));
  const rows=plan.map((p,i)=>{
   const t=list[i],b=costBreakdown(t,costCase),c=scenario(t,key);
@@ -49,8 +71,8 @@ export function scenarioCurve(order,items,key='expected'){
  const curve=months.map((m,month)=>{const net=m.gross-m.operating-m.labor-m.once;running+=net;return {month,...m,net,cumulative:running}});
  return {rows,curve,net:running,finishWeek:plan.at(-1)?.endWeek??0,beyondHorizon:rows.filter(r=>r.beyondHorizon).map(r=>r.id)};
 }
-export function compareScenarios(orderA,orderB,items,key='expected'){
- const a=scenarioCurve(orderA,items,key),b=scenarioCurve(orderB,items,key);
+export function compareScenarios(orderA,orderB,items,key='expected',optionsA={},optionsB={}){
+ const a=scenarioCurve(orderA,items,key,optionsA),b=scenarioCurve(orderB,items,key,optionsB);
  return {a,b,delta:b.net-a.net,deltaCurve:a.curve.map((m,i)=>({month:m.month,delta:b.curve[i].cumulative-m.cumulative}))};
 }
 // CD3: månedlig netto driftsbidrag delt på varighet i måneder. Rent økonomisk –
@@ -103,9 +125,9 @@ export function coverage(roadmap,items){
   byHorizon:Object.keys(horizons).map(horizon=>({horizon,measures:items.filter(t=>t.horizon===horizon)}))};
 }
 // Uenighet mellom plassert horisont og beregnet landing er innsikt, ikke feil.
-export function placementSignals(order,items,key='expected'){
+export function placementSignals(order,items,key='expected',options={}){
  const byId=new Map(items.map(t=>[t.id,t]));
- return scenarioCurve(order,items,key).rows.flatMap(r=>{
+ return scenarioCurve(order,items,key,options).rows.flatMap(r=>{
   const horizon=byId.get(r.id)?.horizon;if(!horizon)return [];
   const [from,to]=horizonMonths[horizon];
   return r.landing<from||r.landing>=to?[{id:r.id,name:r.name,horizon,landing:r.landing,from,to}]:[];

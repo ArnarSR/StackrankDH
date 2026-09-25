@@ -39,7 +39,10 @@ Prioriteringslab sammenligner to utvalg og rekkefølger av arbeid med samme team
 7. Teamkostnad er en økonomisk ressurskostnad, ikke nødvendigvis en ekstra utbetaling. Unngå å føre den på nytt i øvrige kostnadsposter.
 8. Porteføljen proraterer ikke effekten etter teamets ferdiguke. Brukeren må tilpasse kundeverdi/rekkevidde. Laben har en annen, eksplisitt modell: sekvensielt arbeid i ett team og årlig gevinst/drift prorateres fra ferdiguke til uke 52. Veikartet har en tredje: 24 måneder, månedlig, med proratering fra landingsmåned. Ikke bland modellene uten en uttrykkelig beslutning.
 9. Låst verdi («låser opp X kr») vises ved siden av nettoverdien, aldri under, og summeres aldri inn i en total. Verdiene overlapper mellom ledd i en kjede, så en sum på tvers er meningsløs.
-10. Objectives, key results og visjon er en kvalitativ ramme. De endrer ingen økonomiske tall, og manglende kobling er en rapportert mangel, ikke en valideringsfeil.
+10. Oppgaver er en nedbryting av en teamrad, aldri en egen kostnad. Teamraden er eneste kilde til økonomi, og differansen mellom oppgavesum og teamrad rapporteres i stedet for å avstemmes.
+11. Parallellitetstapet er en justerbar antakelse med Weinberg som default — en erfaringsregel, ikke en måling. Det treffer kalendertid, ikke kostnad. Se faq.html for kilder og uenigheten mellom dem.
+12. GitHub-integrasjonen er bevisst uten autentisering. Ikke innfør tokenhåndtering i en statisk side uten å ta beslutningen eksplisitt.
+13. Objectives, key results og visjon er en kvalitativ ramme. De endrer ingen økonomiske tall, og manglende kobling er en rapportert mangel, ikke en valideringsfeil.
 
 ## Kjente begrensninger
 

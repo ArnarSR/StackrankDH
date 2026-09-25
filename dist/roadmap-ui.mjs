@@ -1,5 +1,5 @@
 import {scenario,horizons,evidence,strategicFit} from './model.mjs';
-import {seedRoadmap,keyResults,scenarioCurve,compareScenarios,unlocks,coverage,placementSignals,validateRoadmap,suggestedOrder,breakEvenMonth,HORIZON_MONTHS} from './roadmap-model.mjs';
+import {seedRoadmap,keyResults,scenarioCurve,compareScenarios,unlocks,coverage,placementSignals,validateRoadmap,suggestedOrder,breakEvenMonth,throughput,switchingLoss,HORIZON_MONTHS} from './roadmap-model.mjs';
 const $=id=>document.getElementById(id);
 const number=(v,d=0)=>new Intl.NumberFormat('nb-NO',{maximumFractionDigits:d,minimumFractionDigits:d}).format(v);
 const compact=v=>Math.abs(v)>=1000000?number(v/1000000,2)+' mill.':Math.abs(v)>=1000?number(v/1000,0)+' tusen':number(v);
@@ -40,7 +40,8 @@ function renderBoard(){
  const all=items(),unlocked=new Map(unlocks(all).map(u=>[u.id,u]));
  const krTitle=id=>keyResults(roadmap).find(k=>k.id===id)?.title;
  const card=t=>{const u=unlocked.get(t.id),net=scenario(t).net;
-  return `<article class="roadmap-card" data-measure-id="${esc(t.id)}">
+  return `<article class="roadmap-card" draggable="true" data-measure-id="${esc(t.id)}">
+   <label class="card-horizon">Horisont<select data-set-horizon="${esc(t.id)}"><option value=""${t.horizon?'':' selected'}>Ikke plassert</option>${Object.entries(horizons).map(([key,h])=>`<option value="${key}"${t.horizon===key?' selected':''}>${h.label}</option>`).join('')}</select></label>
    <button class="name-button" data-select="${esc(t.id)}">${esc(t.name)}</button>
    <div class="segment">${esc(t.segment)}</div>
    <div class="card-badges"><span class="badge fit-${t.strategicFit}">${strategicFit[t.strategicFit].label}</span><span class="badge evidence-${t.confidence}">${evidence[t.confidence].label}</span></div>
@@ -49,7 +50,7 @@ function renderBoard(){
    ${(t.requires??[]).length?`<div class="card-requires">Forutsetter: ${esc(t.requires.map(measureName).join(', '))}</div>`:''}
    ${(t.keyResultIds??[]).length?`<div class="card-krs">${t.keyResultIds.map(id=>`<span class="kr-chip">${esc(krTitle(id)??'Utdatert kobling')}</span>`).join('')}</div>`:''}
   </article>`};
- const column=(key,label,window,list)=>`<div class="roadmap-column"><div class="roadmap-column-head"><h3>${label}</h3><span>${window}</span><span class="count">${list.length}</span></div>${list.length?list.map(card).join(''):'<p class="field-help">Ingen tiltak her.</p>'}</div>`;
+ const column=(key,label,window,list)=>`<div class="roadmap-column" data-horizon="${key}"><div class="roadmap-column-head"><h3>${label}</h3><span>${window}</span><span class="count">${list.length}</span></div>${list.length?list.map(card).join(''):'<p class="field-help">Slipp et tiltak her, eller velg horisont på kortet.</p>'}</div>`;
  $('roadmap-board').innerHTML=Object.entries(horizons).map(([key,h])=>column(key,h.label,h.window,all.filter(t=>t.horizon===key))).join('')
   +column('none','Ikke plassert','uten horisont',all.filter(t=>!t.horizon));
 }
@@ -64,18 +65,21 @@ function renderScenarios(){
  const a=scenarioById(compare.a),b=scenarioById(compare.b);
  if(!a||!b||error){$('scenario-curve').innerHTML='';$('scenario-columns').innerHTML='';$('scenario-rows').innerHTML='';
   if(!error)$('scenario-error').textContent='Velg to scenarioer å sammenligne.';return;}
- const cmp=compareScenarios(a.order,b.order,all);
+ const wipOf=s=>Math.max(1,Math.round(s.wip||1));
+ const cmp=compareScenarios(a.order,b.order,all,'expected',{wip:wipOf(a)},{wip:wipOf(b)});
  renderCurve(cmp,a,b);
  $('scenario-columns').innerHTML=[[a,cmp.a,'a'],[b,cmp.b,'b']].map(([s,result,side])=>`<div class="scenario-column" data-scenario-id="${esc(s.id)}">
   <div class="scenario-column-head"><span class="scenario-key scenario-${side}"></span><h3 class="scenario-title"><input data-scenario-name="${esc(s.id)}" value="${esc(s.name)}" maxlength="80" aria-label="Navn på scenario"></h3><button type="button" class="danger" data-remove-scenario="${esc(s.id)}">${removeLabel('sc:'+s.id)}</button>
   <strong class="${result.net<0?'negative':'positive'}">${money(result.net)}</strong><small>kumulativt over ${HORIZON_MONTHS} måneder${breakEvenMonth(result.curve)===null?' · går ikke i null innen horisonten':' · i null fra måned '+breakEvenMonth(result.curve)}</small></div>
+  <div class="wip-control"><label>Samtidige tiltak<input type="number" min="1" max="8" step="1" value="${wipOf(s)}" data-wip="${esc(s.id)}"></label>
+   <span class="wip-readout">${wipOf(s)===1?'Én av gangen · ingen kontekstbytte':`${Math.round(switchingLoss(wipOf(s))*100)} % av tiden går til kontekstbytte · gjennomstrømning ${number(throughput(wipOf(s)),2)}×`}<a href="faq.html" target="_blank" rel="noopener">Hvor kommer tallet fra? ↗</a></span></div>
   <p class="field-help">${esc(s.note??'')}</p>
   ${s.order.length?s.order.map((id,i)=>{const row=result.rows[i];
    return `<div class="scenario-item"><span class="scenario-pos">${i+1}</span><div><strong>${esc(measureName(id))}</strong><small>${row.beyondHorizon?'Lander etter horisonten':`Lander måned ${row.landing} · ${row.effectMonths} mnd effekt`}</small></div>
    <div class="scenario-item-actions"><button type="button" data-move="up" data-scenario="${esc(s.id)}" data-id="${esc(id)}" aria-label="Flytt opp"${i===0?' disabled':''}>↑</button><button type="button" data-move="down" data-scenario="${esc(s.id)}" data-id="${esc(id)}" aria-label="Flytt ned"${i===s.order.length-1?' disabled':''}>↓</button><button type="button" class="danger" data-drop="${esc(id)}" data-scenario="${esc(s.id)}" aria-label="Fjern">×</button></div></div>`}).join(''):'<p class="field-help">Ingen tiltak i dette scenarioet.</p>'}
   <label class="scenario-add">Legg til tiltak<select data-add-to="${esc(s.id)}"><option value="">Velg tiltak …</option>${all.filter(t=>!s.order.includes(t.id)).map(t=>`<option value="${esc(t.id)}">${esc(t.name)}</option>`).join('')}</select></label>
  </div>`).join('');
- const signals=[...placementSignals(a.order,all).map(s=>[a.name,s]),...placementSignals(b.order,all).map(s=>[b.name,s])];
+ const signals=[...placementSignals(a.order,all,'expected',{wip:wipOf(a)}).map(s=>[a.name,s]),...placementSignals(b.order,all,'expected',{wip:wipOf(b)}).map(s=>[b.name,s])];
  $('scenario-rows').innerHTML=`<div class="table-scroll"><table class="resource-table"><thead><tr><th>Tiltak</th><th>Scenario</th><th>Lander</th><th>Effektmåneder</th><th>Porteføljeverdi<small>12 mnd</small></th><th>Bidrag i veikartet<small>${HORIZON_MONTHS} mnd</small></th></tr></thead><tbody>${
   [[a,cmp.a],[b,cmp.b]].flatMap(([s,result])=>result.rows.map(r=>`<tr><th scope="row">${esc(r.name)}</th><td>${esc(s.name)}</td><td>${r.beyondHorizon?'Etter horisonten':'Måned '+r.landing}</td><td>${r.effectMonths}</td><td>${money(r.portfolioNet)}</td><td class="${r.horizonNet<0?'negative':'positive'}">${money(r.horizonNet)}</td></tr>`)).join('')
   ||'<tr><td colspan="6">Ingen tiltak i scenarioene.</td></tr>'}</tbody></table></div>
@@ -157,6 +161,11 @@ export function bindRoadmap(getItems,onSelect,onRerender){
   scenarioById(id).name=e.target.value;
   for(const sel of [$('scenario-pick-a'),$('scenario-pick-b')]){const option=[...sel.options].find(o=>o.value===id);if(option)option.textContent=e.target.value}
  });
+ $('scenario-columns').addEventListener('change',e=>{
+  const id=e.target.dataset.wip;if(!id)return;
+  scenarioById(id).wip=Math.max(1,Math.min(8,Math.round(e.target.valueAsNumber||1)));
+  renderScenarios();
+ });
  $('scenario-columns').addEventListener('click',e=>{
   const button=e.target.closest('button');if(!button)return;
   const remove=button.dataset.removeScenario;
@@ -176,4 +185,28 @@ export function bindRoadmap(getItems,onSelect,onRerender){
   renderScenarios();
  });
  $('roadmap-board').addEventListener('click',e=>{const select=e.target.closest('[data-select]');if(select)onSelect(select.dataset.select)});
+ // Horisont settes enten med nedtrekk (tastatur) eller ved å dra kortet. Begge skriver samme felt.
+ const setHorizon=(id,horizon)=>{const t=items().find(x=>x.id===id);if(!t||t.horizon===(horizon||''))return;t.horizon=horizon||'';renderRoadmap();onRerender?.()};
+ $('roadmap-board').addEventListener('change',e=>{const id=e.target.dataset.setHorizon;if(id)setHorizon(id,e.target.value)});
+ let dragging=null;
+ $('roadmap-board').addEventListener('dragstart',e=>{
+  const card=e.target.closest('[data-measure-id]');if(!card)return;
+  dragging=card.dataset.measureId;card.classList.add('dragging');
+  e.dataTransfer.effectAllowed='move';e.dataTransfer.setData('text/plain',dragging);
+ });
+ $('roadmap-board').addEventListener('dragend',()=>{dragging=null;document.querySelectorAll('.roadmap-card.dragging,.roadmap-column.drop-target').forEach(el=>el.classList.remove('dragging','drop-target'))});
+ $('roadmap-board').addEventListener('dragover',e=>{
+  const column=e.target.closest('[data-horizon]');if(!column||!dragging)return;
+  e.preventDefault();e.dataTransfer.dropEffect='move';
+  document.querySelectorAll('.roadmap-column.drop-target').forEach(el=>el.classList.remove('drop-target'));
+  column.classList.add('drop-target');
+ });
+ $('roadmap-board').addEventListener('drop',e=>{
+  const column=e.target.closest('[data-horizon]');if(!column)return;
+  e.preventDefault();
+  const id=dragging??e.dataTransfer.getData('text/plain');
+  const horizon=column.dataset.horizon;
+  dragging=null;
+  if(id)setHorizon(id,horizon==='none'?'':horizon);
+ });
 }

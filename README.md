@@ -19,6 +19,10 @@ Kjør `npm start` fra denne mappen, eller `python3 -m http.server 4173 --bind 12
 - Forutsetninger mellom tiltak, og «låser opp»-verdi på tiltaket som forutsettes.
 - Scenariosammenligning over 24 måneder med kumulativ nettoverdikurve, redigerbar rekkefølge og forutsetningene synlig ved siden av. Kurven markerer hvor hvert tiltak lander og når planen går i null.
 - Foreslått rekkefølge etter CD3 (månedlig driftsbidrag delt på varighet), som respekterer forutsetninger mellom tiltak.
+- Roller med ferdigheter og kapasitet, og kapasitetsbruk per rolle på tvers av tiltakene.
+- Oppgaver brutt ned per teamrad, med «hvem må være med» og avvik mot teamradens ressursuker.
+- GitHub uten innlogging: oppgaver kan lenkes til en issue, åpnes som ferdig utfylt issue, eller eksporteres til CSV.
+- WIP-grense per scenario som viser hva parallelt arbeid koster i tid og verdi, med kildene på [faq.html](dist/faq.html).
 - Redigerbare kostnadsposter med type (årlig/engang), grunnlag (kjent/anslag), lav/forventet/høy og kildenotat.
 - Redigerbare team med leveranse, bemanning og varighet i tre scenarioer, oppstart, ukesats og valg om kostnaden inngår.
 - Kostnadsfordeling, samlet ressursinnsats, gjennomføringsplan og teambelastning på tvers av tiltak.
@@ -76,6 +80,22 @@ Plassering i Now/Next/Later er en intensjon og valideres ikke mot beregnet landi
 CD3 er rent økonomisk. Evidens, risiko og strategisk fit inngår ikke og må vurderes ved siden av; forslaget er et utgangspunkt for diskusjon, ikke en beslutning.
 
 To forbehold er verdt å merke seg. Forslaget sekvenserer **alle** tiltak — det svarer på rekkefølge, ikke på hva som bør droppes. Og fordi planer kan ha ulikt omfang, er totalen for en plan med fem tiltak ikke sammenlignbar med en plan som inneholder to; sammenlign kurveformen og nullpunktet, ikke bare sluttsummen.
+
+## Roller, oppgaver og GitHub
+
+Rollelisten definerer hvilke roller teamet har, med enkle ferdigheter og tilgjengelig kapasitet i fulltidsekvivalenter. Teamrader på et tiltak kan peke på en rolle; gjør de ikke det, havner innsatsen i «ufordelt etterspørsel» i stedet for å forsvinne. Kapasitetstabellen viser etterspurte ressursuker mot tilgjengelige rolleuker over horisonten.
+
+Oppgaver hører til en teamrad. **Oppgaver påvirker aldri økonomien** — teamraden er fortsatt eneste kilde til kostnad. Summen av oppgavenes estimat holdes mot teamradens ressursuker, og differansen vises som «ikke brutt ned ennå» eller «over teamraden» i stedet for å avstemmes i stillhet. Oppgaver som peker på en slettet teamrad blir synlige, ikke borte.
+
+GitHub-integrasjonen bruker ingen innlogging. Projects v2 er GraphQL-only og krever `read:project`, og en statisk side har ingen trygg plass å oppbevare en token. I stedet bygger verktøyet forhåndsutfylte issue-URL-er som du selv sender inn på github.com, og lar deg lime inn en issue-lenke tilbake. Ingenting sendes automatisk, og verktøyet leser ikke status tilbake fra GitHub.
+
+## Parallellitet
+
+Hvert scenario har en WIP-grense: hvor mange tiltak som kan gå samtidig. Flere parallelle tiltak starter tidligere, men hvert enkelt tar lenger tid, fordi effektiv varighet = varighet ÷ (1 − tap). Standardtapet er Weinbergs tabell, som er en **erfaringsregel og ikke en måling**.
+
+Regnet om til gjennomstrømning gir de tallene en omvendt U: 2 samtidige gir 1,60×, 3 gir 1,80×, 4 gir 1,60× og 5 gir 1,25×. Optimum rundt tre. Kildene, uenigheten mellom dem og alle forbehold ligger på [faq.html](dist/faq.html).
+
+Tapet treffer kalendertid, ikke kostnad: et tiltak blir ikke dyrere av å gå saktere, men lander senere og rekker dermed færre effektmåneder innen horisonten. Tapet bruker WIP-innstillingen som konstant, ikke faktisk samtidighet time for time.
 
 ### Tre tidsmodeller
 
