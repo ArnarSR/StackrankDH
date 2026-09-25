@@ -97,15 +97,18 @@ Regnet om til gjennomstrømning gir de tallene en omvendt U: 2 samtidige gir 1,6
 
 Tapet treffer kalendertid, ikke kostnad: et tiltak blir ikke dyrere av å gå saktere, men lander senere og rekker dermed færre effektmåneder innen horisonten. Tapet bruker WIP-innstillingen som konstant, ikke faktisk samtidighet time for time.
 
-### Tre tidsmodeller
+### To tidsmodeller
 
-Verktøyet har nå tre bevisst ulike tidsmodeller. Ikke bland dem uten en uttrykkelig beslutning:
+Prioriteringslaben er konvergert mot veikartets tidsmodell. Begge bruker nå samme motor i `dist/timeline.mjs`: 24 måneders horisont, månedlig opptjening fra landingsmåned, og samme parallellitetsfaktor. De har fortsatt hver sin datamodell — laben regner på frittstående alternativer med årlig bruttogevinst, veikartet på porteføljens churn-tiltak — men tiden behandles likt.
 
 | Flate | Horisont | Proratering |
 | --- | --- | --- |
 | Tiltaksporteføljen | 12 måneder | Nei — brukeren justerer rekkevidde og kundeverdi selv |
-| Prioriteringslaben | 52 uker, ett team sekvensielt | Ja, fra ferdiguke |
-| Veikart og scenarioer | 24 måneder, månedlig | Ja, fra landingsmåned |
+| Veikart, scenarioer og prioriteringslab | 24 måneder, månedlig | Ja, fra landingsmåned |
+
+Porteføljen står bevisst utenfor: den svarer på «hva er dette tiltaket verdt som business case», ikke «når inntreffer det». Den skal fortsatt ikke proratere automatisk.
+
+**Konvergeringen endret labens tall.** Der laben før proraterte én årsgevinst mot uke 52, opptjener den nå månedlig i inntil 24 måneder. Leveranser som lander tidlig er derfor verdt vesentlig mer enn før. Laben har også fått en WIP-innstilling, siden den bruker samme scheduler.
 
 ## Prioriteringslab
 

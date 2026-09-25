@@ -1,3 +1,5 @@
+import {scheduleWork,accrueMonthly,breakEvenMonth,HORIZON_MONTHS,HORIZON_WEEKS} from './timeline.mjs';
+export {breakEvenMonth,HORIZON_MONTHS};
 export const cases = ['low','expected','high'];
 export const evidenceNames = {hypothesis:'Hypotese',benchmark:'Benchmark',observational:'Observasjon',quasi:'Kvasi-eksperiment',randomized:'Randomisert eksperiment'};
 export const initialOptions = [
@@ -9,24 +11,40 @@ export const initialOptions = [
 export const initialPain = {name:'Kunden må kontakte oss flere ganger om samme Wi-Fi-problem',customers:30000,incidents:2.4,unitCost:350,reach:60,reduction:{low:10,expected:25,high:40},source:'Illustrative tall. Erstatt med CRM-uttrekk, kontaktårsaksanalyse og kostnad fra økonomi.',owner:'Kundeservice / innsikt',unknown:'Hvor mye skyldes problemer vi faktisk kan løse, og hvilke kunder får varig hjelp?'};
 export function painValue(p) {const burden=p.customers*p.incidents*p.unitCost;return {burden,potential:Object.fromEntries(cases.map(k=>[k,burden*p.reach/100*p.reduction[k]/100]))};}
 export function isValidated(o){return o.kind==='delivery'&&['quasi','randomized'].includes(o.evidence);}
+// Laben bruker samme tidsmodell som veikartet: 24 måneder, månedlig opptjening
+// fra landingsmåned, og valgfri parallellitet. Arbeidets kalendertid utledes av
+// innsats delt på tilgjengelige fulltidsressurser.
 export function planValue(options,ids,settings,scenario='expected') {
- const effortCase=scenario==='low'?'high':scenario==='high'?'low':'expected';let finish=0;
- const rows=ids.map(id=>options.find(o=>o.id===id)).filter(Boolean).map(o=>{
-  const effort=o.effort[effortCase];finish+=effort/settings.fte;
-  const active=Math.max(0,52-finish)/52;
-  const labor=effort*settings.weeklyRate;
-  const gross=o.kind==='discovery'?0:o.benefit[scenario]*active;
-  const operating=o.kind==='discovery'?0:o.annualCost*active;
-  const cost=labor+o.once+operating;
-  return {id:o.id,name:o.name,effort,finish,active,gross,cost,net:gross-cost,validated:isValidated(o),discovery:o.kind==='discovery'};
- });
- const effort=rows.reduce((s,r)=>s+r.effort,0);
- return {rows,effort,finish,capacity:settings.fte*settings.weeks,feasible:effort<=settings.fte*settings.weeks+1e-9,net:rows.reduce((s,r)=>s+r.net,0),gross:rows.reduce((s,r)=>s+r.gross,0),cost:rows.reduce((s,r)=>s+r.cost,0),validatedGross:rows.filter(r=>r.validated).reduce((s,r)=>s+r.gross,0),uncertainGross:rows.filter(r=>!r.validated&&!r.discovery).reduce((s,r)=>s+r.gross,0),discoveryCost:rows.filter(r=>r.discovery).reduce((s,r)=>s+r.cost,0)};
+ const effortCase=scenario==='low'?'high':scenario==='high'?'low':'expected';
+ const picked=ids.map(id=>options.find(o=>o.id===id)).filter(Boolean);
+ const plan=scheduleWork(picked.map(o=>({id:o.id,durationWeeks:o.effort[effortCase]/settings.fte})),
+  {wip:settings.wip??1,losses:settings.losses});
+ const {rows,curve,net}=accrueMonthly(plan.map((p,i)=>{
+  const o=picked[i],discovery=o.kind==='discovery';
+  return {...p,name:o.name,effort:o.effort[effortCase],
+   annualGross:discovery?0:o.benefit[scenario],
+   annualOperating:discovery?0:o.annualCost,
+   once:o.once,labor:o.effort[effortCase]*settings.weeklyRate,
+   validated:isValidated(o),discovery};
+ }));
+ const withTotals=rows.map(r=>({...r,finish:r.endWeek,
+  gross:r.applied.gross,cost:r.applied.operating+r.applied.labor+r.applied.once,net:r.horizonNet}));
+ const effort=withTotals.reduce((s,r)=>s+r.effort,0);
+ const capacity=settings.fte*settings.weeks;
+ return {rows:withTotals,curve,effort,finish:plan.at(-1)?.endWeek??0,capacity,
+  feasible:effort<=capacity+1e-9,net,
+  gross:withTotals.reduce((s,r)=>s+r.gross,0),
+  cost:withTotals.reduce((s,r)=>s+r.cost,0),
+  validatedGross:withTotals.filter(r=>r.validated).reduce((s,r)=>s+r.gross,0),
+  uncertainGross:withTotals.filter(r=>!r.validated&&!r.discovery).reduce((s,r)=>s+r.gross,0),
+  discoveryCost:withTotals.filter(r=>r.discovery).reduce((s,r)=>s+r.cost,0)};
 }
+// Eget kontrafaktisk regnestykke. Netto driftsbidrag per år × tapte uker,
+// avgrenset til det som er igjen av horisonten. Legges aldri oppå planforskjellen.
 export function delayValue(option,settings,weeks,scenario='expected') {
  const effortCase=scenario==='low'?'high':scenario==='high'?'low':'expected';
  const finish=option.effort[effortCase]/settings.fte;
- const lostWeeks=Math.max(0,Math.min(weeks,52-finish));
+ const lostWeeks=Math.max(0,Math.min(weeks,HORIZON_WEEKS-finish));
  return (option.benefit[scenario]-option.annualCost)*lostWeeks/52;
 }
 export function ordered(v){return cases.every(k=>Number.isFinite(v[k])&&v[k]>=0)&&v.low<=v.expected&&v.expected<=v.high;}

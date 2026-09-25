@@ -1,7 +1,8 @@
 import {problem} from './validation.mjs';
 import {scenario,costCaseFor,horizons} from './model.mjs';
 import {costBreakdown} from './resources.mjs';
-export const HORIZON_MONTHS=24,WEEKS_PER_MONTH=52/12;
+import {HORIZON_MONTHS,WEEKS_PER_MONTH,defaultSwitchingLoss,switchingLoss,focusFactor,throughput,scheduleWork,accrueMonthly,breakEvenMonth} from './timeline.mjs';
+export {HORIZON_MONTHS,WEEKS_PER_MONTH,defaultSwitchingLoss,switchingLoss,focusFactor,throughput,breakEvenMonth};
 // Now/Next/Later som månedsintervaller. Later har ingen øvre grense.
 export const horizonMonths={now:[0,3],next:[3,12],later:[12,Infinity]};
 export const keyResults=roadmap=>(roadmap.objectives??[]).flatMap(o=>(o.keyResults??[]).map(k=>({...k,objectiveId:o.id,objectiveTitle:o.title})));
@@ -17,59 +18,22 @@ export const seedRoadmap=()=>({
  scenarios:[
   {id:'sc-platform',name:'Plattform først',note:'Bygger telemetri før diagnostikk, og tar adopsjon etterpå.',order:['telemetry','diagnostics','adoption']},
   {id:'sc-quick',name:'Rask gevinst først',note:'Hopper over plattformarbeidet og tar det som kan leveres raskt.',order:['adoption','wifi']}]});
-// Andel produktiv tid som går tapt når N ting er i gang samtidig. Weinberg (1991)
-// er en erfaringsregel, ikke en måling – se faq.html. Tallene er ment å justeres.
-export const defaultSwitchingLoss={1:0,2:.2,3:.4,4:.6,5:.75};
-export const switchingLoss=(wip,losses=defaultSwitchingLoss)=>{
- const n=Math.max(1,Math.round(wip||1));
- if(losses[n]!==undefined)return losses[n];
- const keys=Object.keys(losses).map(Number).sort((a,b)=>a-b);
- return losses[keys[keys.length-1]]??0;
-};
-export const focusFactor=(wip,losses)=>Math.max(1e-6,1-switchingLoss(wip,losses));
-// Gjennomstrømning relativt til å gjøre én ting av gangen. Med Weinberg-tallene
-// topper den seg rundt tre samtidige og faller igjen – en omvendt U.
-export const throughput=(wip,losses)=>Math.max(1,Math.round(wip||1))*focusFactor(wip,losses);
-// wip baner i parallell. Et tiltak starter når en bane er ledig, men aldri før
-// forutsetningene er ferdige. Tapet bruker wip-innstillingen som konstant, ikke
-// faktisk samtidighet time for time.
-export function schedule(list,key='expected',{wip=1,losses=defaultSwitchingLoss}={}){
+// Adapter: tiltakets kalendertid hentes fra teamdataene, resten er felles motor.
+export function schedule(list,key='expected',options={}){
  const costCase=costCaseFor(key);
- const lanes=Array(Math.max(1,Math.round(wip||1))).fill(0);
- const factor=focusFactor(wip,losses);
- const finished=new Map();
- return list.map(t=>{
-  const {duration}=costBreakdown(t,costCase);
-  const stretched=duration/factor;
-  const ready=Math.max(0,...(t.requires??[]).map(id=>finished.get(id)??0));
-  const lane=lanes.indexOf(Math.min(...lanes));
-  const startWeek=Math.max(lanes[lane],ready),endWeek=startWeek+stretched;
-  lanes[lane]=endWeek;finished.set(t.id,endWeek);
-  const startMonth=Math.floor(startWeek/WEEKS_PER_MONTH),landing=Math.ceil(endWeek/WEEKS_PER_MONTH);
-  return {id:t.id,name:t.name,duration,effectiveDuration:stretched,lane,startWeek,endWeek,startMonth,landing,
-   workMonths:Math.max(1,landing-startMonth),
-   effectMonths:Math.max(0,HORIZON_MONTHS-landing),
-   beyondHorizon:landing>=HORIZON_MONTHS};
- });
+ const rows=list.map(t=>({id:t.id,durationWeeks:costBreakdown(t,costCase).duration,requires:t.requires??[]}));
+ return scheduleWork(rows,options).map((row,i)=>({...row,name:list[i].name}));
 }
 export function scenarioCurve(order,items,key='expected',options={}){
  const costCase=costCaseFor(key);
  const list=(order??[]).map(id=>items.find(t=>t.id===id)).filter(Boolean);
  const plan=schedule(list,key,options);
- const months=Array.from({length:HORIZON_MONTHS},()=>({gross:0,operating:0,labor:0,once:0}));
- const rows=plan.map((p,i)=>{
+ const {rows,curve,net}=accrueMonthly(plan.map((p,i)=>{
   const t=list[i],b=costBreakdown(t,costCase),c=scenario(t,key);
-  const applied={gross:0,operating:0,labor:0,once:0};
-  const apply=(m,field,value)=>{if(m>=0&&m<HORIZON_MONTHS){months[m][field]+=value;applied[field]+=value}};
-  apply(p.startMonth,'once',b.once);
-  for(let m=p.startMonth;m<p.startMonth+p.workMonths;m++)apply(m,'labor',b.labor/p.workMonths);
-  for(let m=p.landing;m<HORIZON_MONTHS;m++){apply(m,'gross',c.gross/12);apply(m,'operating',b.annual/12)}
-  return {...p,gross:c.gross,annual:b.annual,once:b.once,labor:b.labor,portfolioNet:c.net,applied,
-   horizonNet:applied.gross-applied.operating-applied.labor-applied.once};
- });
- let running=0;
- const curve=months.map((m,month)=>{const net=m.gross-m.operating-m.labor-m.once;running+=net;return {month,...m,net,cumulative:running}});
- return {rows,curve,net:running,finishWeek:plan.at(-1)?.endWeek??0,beyondHorizon:rows.filter(r=>r.beyondHorizon).map(r=>r.id)};
+  return {...p,annualGross:c.gross,annualOperating:b.annual,once:b.once,labor:b.labor,
+   gross:c.gross,annual:b.annual,portfolioNet:c.net};
+ }));
+ return {rows,curve,net,finishWeek:plan.at(-1)?.endWeek??0,beyondHorizon:rows.filter(r=>r.beyondHorizon).map(r=>r.id)};
 }
 export function compareScenarios(orderA,orderB,items,key='expected',optionsA={},optionsB={}){
  const a=scenarioCurve(orderA,items,key,optionsA),b=scenarioCurve(orderB,items,key,optionsB);
@@ -98,8 +62,6 @@ export function suggestedOrder(items,key='expected'){
  for(const t of [...items].sort((a,b)=>score.get(b.id)-score.get(a.id)||a.name.localeCompare(b.name,'nb')))place(t);
  return placed;
 }
-// Første måned der kumulativ nettoverdi er null eller positiv.
-export const breakEvenMonth=curve=>curve.find(m=>m.cumulative>=0)?.month??null;
 // Låst verdi: hva et tiltak gjør mulig. Summeres aldri inn i en total — verdiene overlapper i en kjede.
 export function unlocks(items,key='expected'){
  const byId=new Map(items.map(t=>[t.id,t]));
