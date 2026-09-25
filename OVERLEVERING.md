@@ -43,7 +43,8 @@ Prioriteringslab sammenligner to utvalg og rekkefølger av arbeid med samme team
 11. Parallellitetstapet er en justerbar antakelse med Weinberg som default — en erfaringsregel, ikke en måling. Det treffer kalendertid, ikke kostnad. Se faq.html for kilder og uenigheten mellom dem.
 12. GitHub-integrasjonen er bevisst uten autentisering. Ikke innfør tokenhåndtering i en statisk side uten å ta beslutningen eksplisitt.
 13. Nåkostnader er et eget regnskap. Problemkostnad er ikke tiltaksverdi, summeres aldri inn i en plan, og påvirkbar andel er bruttopotensial – ikke lovet gevinst.
-14. Objectives, key results og visjon er en kvalitativ ramme. De endrer ingen økonomiske tall, og manglende kobling er en rapportert mangel, ikke en valideringsfeil.
+14. Kundeverdien settes sammen av deler og kappes ved 12 måneder, nettopp for å hindre at full CLV smugles inn i strid med punkt 2. Tiltak arver standarden; overstyrte tiltak endres aldri i stillhet, men listes som avvik.
+15. Objectives, key results og visjon er en kvalitativ ramme. De endrer ingen økonomiske tall, og manglende kobling er en rapportert mangel, ikke en valideringsfeil.
 
 ## Kjente begrensninger
 
@@ -53,6 +54,9 @@ Prioriteringslab sammenligner to utvalg og rekkefølger av arbeid med samme team
 - Laben modellerer én felles teamflaskehals og sekvensielt arbeid, ikke full planlegging på tvers av team.
 - Summer korrigeres ikke automatisk for overlapp, og avhengigheter endrer ikke planen automatisk.
 - Dokumentlenker registreres manuelt. Dokumentinnhold hentes eller verifiseres ikke automatisk.
+- Ukesats settes fortsatt per teamrad (9 steder i eksempeldataene), og er ikke samlet i parametrene.
+- Tapstabellen for kontekstbytte er dokumentert som justerbar og støttes av modellen, men er ennå ikke eksponert i grensesnittet. Weinberg-tallene er i praksis låst til defaultverdiene.
+- Horisonten på 24 måneder er hardkodet i `dist/timeline.mjs`.
 - Ingen database eller delt redigering i appen. Den nåværende vertstjenesten kan styre tilgang til selve siden.
 
 ## Filer

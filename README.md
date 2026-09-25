@@ -89,6 +89,16 @@ Oppgaver hører til en teamrad. **Oppgaver påvirker aldri økonomien** — team
 
 GitHub-integrasjonen bruker ingen innlogging. Projects v2 er GraphQL-only og krever `read:project`, og en statisk side har ingen trygg plass å oppbevare en token. I stedet bygger verktøyet forhåndsutfylte issue-URL-er som du selv sender inn på github.com, og lar deg lime inn en issue-lenke tilbake. Ingenting sendes automatisk, og verktøyet leser ikke status tilbake fra GitHub.
 
+## Parametre
+
+Kundebase og kundeverdi settes ett sted, øverst på porteføljesiden.
+
+Kundeverdien settes **sammen av deler** i stedet for som ett fritt tall: dekningsbidrag per kunde per måned × antall måneder innen horisonten, pluss eventuell gjenvinningskostnad. Antall måneder kappes ved 12, og verktøyet sier fra hvis du prøver å strekke deg forbi. Det er med vilje: modellskille 2 sier at kundeverdi er inkrementelt dekningsbidrag innen 12 måneder, ikke omsetning eller full livstidsverdi, og et fritt felt inviterer til å bryte den regelen.
+
+Tiltak arver standarden. Endrer du den, følger alle tiltak som ikke har satt sin egen verdi automatisk med. Tiltak som **har** satt sin egen verdi røres aldri — de beholder den og listes som avvik («Foreldrekontroll: 5 500 kr mot standard 6 000 kr»). I tiltaksdialogen er kundeverdifeltet låst til standarden inntil du huker av for egen verdi.
+
+Ukesats, tapstabellen for kontekstbytte og horisonten er **ikke** samlet her ennå; se kjente begrensninger.
+
 ## Nåkostnader
 
 Nåkostnadspanelet viser hva dagens problemer koster mens de får stå: berørte kunder × hendelser per år × kostnad per hendelse. Summen vises per år, over 24 måneder, og som påvirkbart bruttopotensial. Hvert problem merkes som målt, anslått eller antatt, og kan knyttes til tiltakene som adresserer det — så det blir synlig hvilke problemer ingen jobber med.
