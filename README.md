@@ -89,6 +89,20 @@ Oppgaver hører til en teamrad. **Oppgaver påvirker aldri økonomien** — team
 
 GitHub-integrasjonen bruker ingen innlogging. Projects v2 er GraphQL-only og krever `read:project`, og en statisk side har ingen trygg plass å oppbevare en token. I stedet bygger verktøyet forhåndsutfylte issue-URL-er som du selv sender inn på github.com, og lar deg lime inn en issue-lenke tilbake. Ingenting sendes automatisk, og verktøyet leser ikke status tilbake fra GitHub.
 
+## Lagring
+
+Alt du skriver inn lagres automatisk i **din egen nettleser** (`localStorage`), og er der neste gang du åpner siden på samme maskin i samme nettleser. Porteføljesiden og prioriteringslaben har hver sin nøkkel, fordi de har hver sin datamodell.
+
+- **Eksporter til fil** laster ned hele arbeidsflaten som JSON, til sikkerhetskopi eller for å flytte mellom maskiner.
+- **Importer fra fil** leser en slik fil tilbake. Filen valideres først: feil app, feil versjon eller feil struktur avvises, og ingenting endres.
+- **Nullstill** sletter lagret data og henter eksempeldataene tilbake. Krever bekreftelse i to steg.
+
+Lagret data har et versjonsnummer. Endres datamodellen senere, avvises gammel data med en forklaring i stedet for å lastes halvveis inn — en halvt gjenopprettet arbeidsflate er farligere enn eksempeldata.
+
+Nettleserlagring kan feile: privat modus, full kvote eller blokkerte nettsteddata. Appen fanger det, sier fra i statuslinjen og fortsetter å virke i minnet. Får du den meldingen, eksporter til fil.
+
+**Dette er ikke delt lagring.** Data ligger bare hos deg, i én nettleser på én maskin. Tømmer du nettleserdata, er det borte. Skal flere jobbe i samme tall, må dere enten dele en eksportfil eller bygge ekte skylagring med backend.
+
 ## Parametre
 
 Kundebase og kundeverdi settes ett sted, øverst på porteføljesiden.

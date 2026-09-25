@@ -1,8 +1,38 @@
 import {parseDocumentLinks} from './document-links.mjs';
+import {LAB_STORAGE_KEY,safeRead,safeWrite,safeClear} from './storage.mjs';
 import {cases,evidenceNames,initialOptions,initialPain,painValue,planValue,delayValue,isValidated} from './decision-model.mjs';
 const $=s=>document.querySelector(s),esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const nf=new Intl.NumberFormat('nb-NO',{maximumFractionDigits:1}),num=x=>nf.format(x),money=x=>`${num(x/1000000)} mill. kr`,full=x=>`${new Intl.NumberFormat('nb-NO',{maximumFractionDigits:0}).format(x)} kr`;
 let options=structuredClone(initialOptions),pain=structuredClone(initialPain),plans={A:['feature','discovery'],B:['diagnostics','wifi','discovery']},settings={fte:2,weeks:13,weeklyRate:30000,wip:1,productCustomers:250000},delay=13;
+// Autolagring for laben. Egen nøkkel: laben har sin egen datamodell.
+function labSnapshot(){return {options,pain,plans,settings,delay};}
+let labTimer=null;
+function labSave(){
+ const r=safeWrite(LAB_STORAGE_KEY,labSnapshot());
+ const el=$('#lab-storage');if(!el)return;
+ el.textContent=r.ok?'Lagres automatisk i denne nettleseren':'Kunne ikke lagre: '+r.error;
+}
+function labSaveSoon(){clearTimeout(labTimer);labTimer=setTimeout(labSave,400);}
+(function labLoad(){
+ const r=safeRead(LAB_STORAGE_KEY);
+ if(!r.ok||!r.workspace)return;
+ const w=r.workspace;
+ if(Array.isArray(w.options))options=w.options;
+ if(w.pain&&typeof w.pain==='object')pain=w.pain;
+ if(w.plans&&typeof w.plans==='object')plans=w.plans;
+ if(w.settings&&typeof w.settings==='object')settings={...settings,...w.settings};
+ if(Number.isFinite(w.delay))delay=w.delay;
+ for(const [id,key] of [['#fte','fte'],['#weeks','weeks'],['#weeklyRate','weeklyRate'],['#wip','wip'],['#lab-product-customers','productCustomers']]){
+  const el=$(id);if(el&&settings[key]!==undefined)el.value=settings[key];
+ }
+})();
+document.addEventListener('input',labSaveSoon,true);
+document.addEventListener('change',labSaveSoon,true);
+document.addEventListener('click',labSaveSoon,true);
+$('#lab-reset')?.addEventListener('click',e=>{
+ if(e.target.dataset.armed!=='true'){e.target.dataset.armed='true';e.target.textContent='Bekreft nullstilling';return}
+ safeClear(LAB_STORAGE_KEY);location.reload();
+});
 const labels={A:'Forespørsel først',B:'Validert + læring'},caseLabels={low:'Lav',expected:'Forventet',high:'Høy'};
 function documentLinks(value){const parsed=parseDocumentLinks(value);return parsed.links.length?`<ul class="document-link-list">${parsed.links.map(l=>`<li><a href="${esc(l.url)}" target="_blank" rel="noopener noreferrer">${esc(l.title)} ↗</a></li>`).join('')}</ul>`:'<span class="no-documents">Ingen dokumentlenker lagt til.</span>';}
 function results(ids){return Object.fromEntries(cases.map(k=>[k,planValue(options,ids,settings,k)]));}

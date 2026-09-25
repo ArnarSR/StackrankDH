@@ -5,10 +5,14 @@ const money=v=>number(v)+' kr';
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let parameters=seedParameters(),readItems=()=>[];
 export const currentParameters=()=>parameters;
+export const snapshotParameters=()=>parameters;
+export function restoreParameters(data){if(data)parameters=data;}
 export const standardCustomerValue=()=>customerValue(parameters).total;
 
 export function renderParameters(){
  const v=customerValue(parameters);
+ const fields=[['value-monthly',parameters.customerValue.monthlyContribution],['value-months',parameters.customerValue.months],['value-winback',parameters.customerValue.winbackCost],['product-name',parameters.product.name],['product-source',parameters.product.source],['product-customers',parameters.product.customers]];
+ for(const [id,value] of fields){const el=$(id);if(el&&document.activeElement!==el&&String(el.value)!==String(value))el.value=value}
  const error=validateParameters(parameters);
  $('value-error').textContent=error;
  $('value-result').innerHTML=`<strong>${money(v.total)}</strong><small>${number(v.monthly)} kr × ${number(v.months)} mnd${v.winback?` + ${money(v.winback)} gjenvinning`:''} · standard kundeverdi per beholdt kunde</small>`;

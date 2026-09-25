@@ -10,6 +10,8 @@ const uid=()=>crypto.randomUUID();
 // og klemmer plankurvene flate. Tallet står uansett i nåkostnadspanelet.
 let problems=seedProblems(),readItems=()=>[],armed=null,showBaseline=false;
 export const currentProblems=()=>problems;
+export const snapshotProblems=()=>({problems,showBaseline});
+export function restoreProblems(data){if(Array.isArray(data?.problems))problems=data.problems;if(typeof data?.showBaseline==='boolean')showBaseline=data.showBaseline;}
 export const baselineVisible=()=>showBaseline;
 
 export function renderProblems(){renderRows();renderSummary();}

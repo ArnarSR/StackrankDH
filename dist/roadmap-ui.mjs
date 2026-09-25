@@ -16,6 +16,8 @@ const removeLabel=key=>armed===key?'Bekreft':'Fjern';
 function confirmRemove(key){if(armed===key){armed=null;return true}armed=key;renderStrategy();renderScenarios();return false;}
 
 export function renderRoadmap(){renderStrategy();renderBoard();renderScenarios();}
+export const snapshotRoadmap=()=>({roadmap,compare});
+export function restoreRoadmap(data){if(data?.roadmap)roadmap=data.roadmap;if(data?.compare)compare=data.compare;}
 
 function renderStrategy(){
  if($('vision').value!==roadmap.vision.statement)$('vision').value=roadmap.vision.statement;

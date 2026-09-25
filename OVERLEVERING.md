@@ -48,7 +48,8 @@ Prioriteringslab sammenligner to utvalg og rekkefølger av arbeid med samme team
 
 ## Kjente begrensninger
 
-- Ingen varig lagring: data finnes bare i minnet i den åpne fanen. Ny innlasting mister endringene. ZIP-filen inneholder kode og eksempeldata, ikke brukerens inndata fra en åpen nettleserøkt.
+- Lagring skjer lokalt i nettleseren (`localStorage`) med eksport/import av JSON. Det er ikke delt lagring: data ligger hos én bruker, i én nettleser, på én maskin, og forsvinner om nettleserdata tømmes.
+- Lagret data er versjonert. Endrer du datamodellen, øk `STORAGE_VERSION` i `dist/storage.mjs`; gammel data avvises da med forklaring i stedet for å lastes halvveis inn.
 - Ingen automatisk oppdatering av en åpen side når en ny versjon publiseres.
 - Portefølje og lab bruker separate data, også separate kundebaseinnstillinger. De er ikke synkronisert.
 - Laben modellerer én felles teamflaskehals og sekvensielt arbeid, ikke full planlegging på tvers av team.

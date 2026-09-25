@@ -7,6 +7,11 @@ import {renderRoadmap,bindRoadmap,measureRoadmapFields,readMeasureRoadmapFields}
 import {renderRoster,bindRoster,renderTasks,currentRoster} from './roster-ui.mjs';
 import {renderProblems,bindProblems,bindBaselineToggle} from './problems-ui.mjs';
 import {renderParameters,bindParameters,measureValueField,applyValueChoice,standardCustomerValue,syncValueField} from './parameters-ui.mjs';
+import {STORAGE_KEY,safeRead,safeWrite,safeClear,parseEnvelope,makeEnvelope,exportName} from './storage.mjs';
+import {snapshotRoadmap,restoreRoadmap} from './roadmap-ui.mjs';
+import {snapshotRoster,restoreRoster} from './roster-ui.mjs';
+import {snapshotProblems,restoreProblems} from './problems-ui.mjs';
+import {snapshotParameters,restoreParameters,currentParameters} from './parameters-ui.mjs';
 const $=id=>document.getElementById(id);
 const number=(v,d=0)=>new Intl.NumberFormat('nb-NO',{maximumFractionDigits:d,minimumFractionDigits:d}).format(v);
 const money=v=>number(v)+' kr';
@@ -57,12 +62,70 @@ $('edit-evidence').addEventListener('click',()=>{openEditor(selected);$('source-
 $('product-customers').addEventListener('input',()=>{const el=$('product-customers');if(!el.validity.valid){el.setAttribute('aria-invalid','true');$('product-warning').textContent='Antall kunder må være et heltall mellom 0 og 1 000 000 000. Beregningene bruker sist gyldige kundebase.';return;}el.removeAttribute('aria-invalid');productCustomers=el.valueAsNumber;render();});
 $('product-warning').addEventListener('click',e=>{const b=e.target.closest('[data-fix-product]');if(b)openEditor(b.dataset.fixProduct);});
 function renderProductWarnings(){const outside=items.filter(t=>t.customers>productCustomers);$('product-warning').innerHTML=outside.length?`<strong>${outside.length} tiltak har flere adresserbare kunder enn produktets kundebase. Rett anslagene før verdiene brukes.</strong>${outside.map(t=>`<button class="error-jump" data-fix-product="${esc(t.id)}">${esc(t.name)}: ${number(t.customers)} kunder – gå til tiltaket ↗</button>`).join('')}`:'';}
+// Autolagring i nettleseren. Feiler den, sier appen fra og fortsetter i minnet.
+function snapshot(){currentParameters().product.customers=productCustomers;
+ return {items,...snapshotRoadmap(),...snapshotRoster(),...snapshotProblems(),parameters:snapshotParameters()};}
+function applyWorkspace(w){
+ if(Array.isArray(w.items)&&w.items.length){items=w.items;selected=items[0].id}
+ restoreRoadmap(w);restoreRoster(w);restoreProblems(w);restoreParameters(w.parameters);
+ const base=currentParameters()?.product?.customers;
+ if(Number.isInteger(base)&&base>=0){productCustomers=base;$('product-customers').value=base}
+}
+let saveTimer=null,storageNote='';
+function setStorageState(state,detail){$('storage-state').textContent=state;$('storage-detail').textContent=detail;}
+function saveNow(){
+ const result=safeWrite(STORAGE_KEY,snapshot());
+ if(result.ok)setStorageState('Lagret i denne nettleseren',storageNote||'Endringene dine er her neste gang du åpner siden på denne maskinen.');
+ else $('storage-error').textContent='Kunne ikke lagre: '+result.error+' Eksporter til fil for å ta vare på arbeidet.';
+}
+function saveSoon(){clearTimeout(saveTimer);saveTimer=setTimeout(saveNow,400);}
+function loadStored(){
+ const result=safeRead(STORAGE_KEY);
+ if(!result.ok){$('storage-error').textContent='Tidligere lagret data kunne ikke leses: '+result.error+' Eksempeldataene vises i stedet.';return false}
+ if(!result.workspace)return false;
+ applyWorkspace(result.workspace);
+ storageNote='Sist lagret '+new Date(result.savedAt??Date.now()).toLocaleString('nb-NO')+'.';
+ return true;
+}
+function downloadWorkspace(){
+ const blob=new Blob([JSON.stringify(makeEnvelope(snapshot()),null,1)],{type:'application/json'});
+ const url=URL.createObjectURL(blob);
+ const a=document.createElement('a');a.href=url;a.download=exportName();a.click();
+ URL.revokeObjectURL(url);
+ setStorageState('Eksportert til fil',exportName()+' er lastet ned.');
+}
+$('export-workspace').addEventListener('click',downloadWorkspace);
+$('import-workspace').addEventListener('change',async e=>{
+ const file=e.target.files?.[0];if(!file)return;
+ e.target.value='';
+ $('storage-error').textContent='';
+ const result=parseEnvelope(await file.text());
+ if(!result.ok){$('storage-error').textContent='Import avvist: '+result.error+' Ingenting er endret.';return}
+ applyWorkspace(result.workspace);
+ storageNote='Importert fra '+file.name+'.';
+ render();saveNow();
+ $('live').textContent='Arbeidsflaten er importert.';
+});
+$('reset-workspace').addEventListener('click',e=>{
+ if(e.target.dataset.armed!=='true'){e.target.dataset.armed='true';e.target.textContent='Bekreft nullstilling';
+  setStorageState('Nullstiller','Alt du har skrevet inn slettes og eksempeldataene kommer tilbake. Klikk igjen for å bekrefte.');return}
+ e.target.dataset.armed='';e.target.textContent='Nullstill';
+ safeClear(STORAGE_KEY);
+ items=structuredClone(examples);selected=items[0].id;
+ storageNote='Nullstilt til eksempeldata.';
+ location.reload();
+});
+document.addEventListener('input',saveSoon,true);
+document.addEventListener('change',saveSoon,true);
+document.addEventListener('click',saveSoon,true);
+loadStored();
 bindRoadmap(()=>items,select);
 bindRoster(()=>items,()=>{if(items.length)renderTasks(items.find(x=>x.id===selected)??items[0])});
 bindProblems(()=>items,()=>renderRoadmap());
 bindBaselineToggle(()=>renderRoadmap());
 bindParameters(()=>items,()=>render());
 render();
+saveNow();
 
 function renderCapacity(){
  const groups=resourcePortfolio(items);$('capacity-count').textContent=groups.length+' team';

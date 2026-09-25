@@ -6,6 +6,8 @@ const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&
 const uid=()=>crypto.randomUUID();
 let roster=seedRoster(),github={repo:'',project:''},readItems=()=>[],armed=null;
 export const currentRoster=()=>roster;
+export const snapshotRoster=()=>({roster,github});
+export function restoreRoster(data){if(data?.roster)roster=data.roster;if(data?.github)github=data.github;}
 export const githubSettings=()=>github;
 const removeLabel=key=>armed===key?'Bekreft':'Fjern';
 
@@ -37,6 +39,8 @@ function renderCapacity(){
  renderGithubStatus();
 }
 function renderGithubStatus(){
+ if($('github-repo').value!==github.repo)$('github-repo').value=github.repo;
+ if($('github-project').value!==github.project)$('github-project').value=github.project;
  const repo=parseRepo(github.repo);
  $('github-status').innerHTML=github.repo.trim()
   ?(repo?`Bruker <strong>${esc(repo)}</strong>. «Opprett issue» åpner GitHubs skjema ferdig utfylt – ingenting sendes inn automatisk.`
