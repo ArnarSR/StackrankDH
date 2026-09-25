@@ -1,7 +1,8 @@
+import {validateSwitchingLosses} from './timeline.mjs';
 // Lagring i nettleseren, med versjon. Lagret data som ikke stemmer med dagens
 // modell avvises heller enn å lastes halvveis inn – da er eksempeldataene et
 // tryggere utgangspunkt enn en halvt gjenopprettet arbeidsflate.
-export const STORAGE_VERSION=1;
+export const STORAGE_VERSION=2;
 export const STORAGE_KEY='churn-studio:workspace';
 export const LAB_STORAGE_KEY='churn-studio:lab';
 const APP='churn-studio';
@@ -18,6 +19,21 @@ export function checkWorkspace(workspace){
   return 'Scenariolisten har feil format.';
  if(isObject(workspace.roster)&&'roles' in workspace.roster&&!Array.isArray(workspace.roster.roles))
   return 'Rollelisten har feil format.';
+ for(const settings of [workspace.parameters,workspace.settings])if(isObject(settings)&&'losses' in settings){
+  const error=validateSwitchingLosses(settings.losses);if(error)return 'Ugyldig tapstabell: '+error;
+ }
+ if(isObject(workspace.roster)&&Array.isArray(workspace.roster.roles))for(const role of workspace.roster.roles)
+  if(!isObject(role)||!Number.isFinite(role.weeklyRate)||role.weeklyRate<0)return 'En rolle mangler gyldig ukesats.';
+ if(isObject(workspace.roadmap)&&'objectives' in workspace.roadmap){
+  if(!Array.isArray(workspace.roadmap.objectives))return 'Objectives har feil format.';
+  for(const objective of workspace.roadmap.objectives){
+   if(!isObject(objective)||!Array.isArray(objective.keyResults))return 'Key results har feil format.';
+   for(const kr of objective.keyResults){
+    if(!isObject(kr))return 'Et key result har feil format.';
+    for(const key of ['baseline','current','target'])if(kr[key]!=null&&!Number.isFinite(kr[key]))return 'Et key result har ugyldige måltall.';
+   }
+  }
+ }
  return null;
 }
 export function parseEnvelope(text){

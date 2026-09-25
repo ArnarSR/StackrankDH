@@ -1,8 +1,10 @@
+import {defaultSwitchingLoss} from './timeline.mjs';
 import {problem} from './validation.mjs';
 // Kundeverdien settes sammen av deler i stedet for som ett fritt tall, slik at
 // modellskille 2 holder: inkrementelt dekningsbidrag innen 12 måneder, ikke full CLV.
 export const VALUE_HORIZON_MONTHS=12;
 export const seedParameters=()=>({
+ losses:{...defaultSwitchingLoss},
  product:{name:'Bredbånd / Wi-Fi',customers:250000,source:''},
  customerValue:{monthlyContribution:500,months:12,winbackCost:0,
   source:'Illustrative tall. Erstatt med dekningsbidrag per kunde fra økonomi.',

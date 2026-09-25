@@ -58,3 +58,11 @@ export function accrueMonthly(entries,{horizonMonths=HORIZON_MONTHS}={}){
 }
 // Første måned der kumulativ nettoverdi er null eller positiv.
 export const breakEvenMonth=curve=>curve.find(m=>m.cumulative>=0)?.month??null;
+
+// Ett tiltak er referansepunktet. 100 % tap ville gi uendelig kalendertid.
+export function validateSwitchingLosses(losses){
+ if(!losses||typeof losses!=='object'||Array.isArray(losses))return 'Tapstabellen mangler.';
+ for(let n=1;n<=5;n++)if(!Number.isFinite(losses[n])||losses[n]<0||losses[n]>=1)return `Tap ved ${n} samtidige må være fra 0 til under 100 %.`;
+ if(losses[1]!==0)return 'Tapet ved ett tiltak må være 0 %; dette er sammenligningsgrunnlaget.';
+ return '';
+}

@@ -4,4 +4,4 @@ Les AGENTS.md, OVERLEVERING.md og README.md før endringer. AGENTS.md har modell
 
 Start: npm start (krever Python 3). Tester: npm test (Node.js 18+). Ingen npm-avhengigheter eller byggefase. Server statiske filer fra dist/.
 
-Data er foreløpig kun i minnet i fanen. Portefølje og prioriteringslab er separate modeller og datasett. Ikke anta at innholdet i en åpen nettleserøkt følger med kodepakken. Publiseringstilgang følger ikke med.
+Data lagres lokalt i nettleseren med versjonert eksport/import. Portefølje og prioriteringslab er separate modeller og datasett. Ikke anta at innholdet i en åpen nettleserøkt følger med kodepakken. Publiseringstilgang følger ikke med.

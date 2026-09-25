@@ -1,6 +1,8 @@
 # Overlevering: Churn Studio
 
-Status 24. september 2026. Dette dokumentet beskriver levert løsning og kjente begrensninger; foreslått videre arbeid er ikke en bestilling på automatisk omskriving.
+Status 25. september 2026. De tre prioriterte handover-oppgavene i AGENTS.md er implementert: redigerbar konteksttapstabell i begge flater, ukesatsarv fra roller med synlige overstyringer, og måltall/fremdrift for key results. De øvrige punktene nedenfor krever fortsatt produktbeslutninger.
+
+Lagringsversjonen er økt til 2. Versjon 1 lastes ikke automatisk; ved avvisning beholdes rådata og automatisk overskriving stoppes. Porteføljens eksportknapp kan ta kopi av den gamle lagringen. Tidligere versjon må brukes for å fortsette med versjon 1. Ingen migrering eller publisering er utført.
 
 ## Formål
 
@@ -16,7 +18,7 @@ Prosjektet bruker vanlig HTML, CSS og JavaScript-moduler. Ingen rammeverk, insta
 - Åpne `/` for porteføljen og `/prioritering.html` for prioriteringslaben.
 - Ikke dobbeltklikk HTML-filene; modulene må serveres over HTTP.
 
-Sist verifisert: 33 beståtte tester. Nettleserkontroll av validering, kundebase, dokumentlenker, kapasitetsbrudd og mobilvisning, uten observerte konsollfeil.
+Sist verifisert: 114 beståtte tester. Nettleserkontroll av konteksttap, ukesatsarv/overstyring, bevaring av oppgaver, målfremdrift, gjenlasting, import og avvist versjon 1. Begge flater kontrollert på 375 px, uten observerte konsollfeil.
 
 ## Levert funksjonalitet
 
@@ -55,8 +57,8 @@ Prioriteringslab sammenligner to utvalg og rekkefølger av arbeid med samme team
 - Laben modellerer én felles teamflaskehals og sekvensielt arbeid, ikke full planlegging på tvers av team.
 - Summer korrigeres ikke automatisk for overlapp, og avhengigheter endrer ikke planen automatisk.
 - Dokumentlenker registreres manuelt. Dokumentinnhold hentes eller verifiseres ikke automatisk.
-- Ukesats settes fortsatt per teamrad (9 steder i eksempeldataene), og er ikke samlet i parametrene.
-- Tapstabellen for kontekstbytte er dokumentert som justerbar og støttes av modellen, men er ennå ikke eksponert i grensesnittet. Weinberg-tallene er i praksis låst til defaultverdiene.
+- Standard ukesats settes nå per rolle. Teamrader med overstyring beholder sin verdi og vises som avvik.
+- Tapstabellen er nå redigerbar i porteføljens parametre og separat i laben. WIP 6–8 bruker tabellens siste verdi (5 samtidige).
 - Horisonten på 24 måneder er hardkodet i `dist/timeline.mjs`.
 - Ingen database eller delt redigering i appen. Den nåværende vertstjenesten kan styre tilgang til selve siden.
 
@@ -81,4 +83,4 @@ Den portable ZIP-pakken inkluderer ikke Git-historikk, autentisering eller Sites
 
 ## Naturlige neste beslutninger – ikke vedtatt arbeidsliste
 
-Kobling mellom portefølje og lab (de har fortsatt hver sin datamodell og hver sin lagringsnøkkel); om ukesats, tapstabellen for kontekstbytte og horisonten skal samles i parametrene; og hvordan usikkerhet og overlapp skal håndteres ved faktisk beslutning. Bevar eksisterende fungerende løsning mens dette vurderes. Unngå rammeverksbytte uten et konkret behov.
+Kobling mellom portefølje og lab (de har fortsatt hver sin datamodell og hver sin lagringsnøkkel); om tidshorisonten skal kunne endres; og hvordan usikkerhet og overlapp skal håndteres ved faktisk beslutning. Bevar eksisterende fungerende løsning mens dette vurderes. Unngå rammeverksbytte uten et konkret behov.

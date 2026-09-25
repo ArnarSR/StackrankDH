@@ -55,7 +55,7 @@ Forventet er et brukerdefinert hovedscenario, ikke et sannsynlighetsvektet forve
 
 Statisk publisering bruker innholdet i `dist/`. Ingen byggefase kreves.
 
-Kildelenker åpnes i ny fane. Kilder lagres bare i denne økten sammen med tiltakene. Ingen referanser eller eksempelstudier er fabrikkert; eksemplene har ingen registrerte kilder. Registrering av en kilde endrer ikke automatisk evidensnivå eller økonomiske tall.
+Kildelenker åpnes i ny fane. Kilder lagres lokalt sammen med tiltakene. Ingen referanser eller eksempelstudier er fabrikkert; eksemplene har ingen registrerte kilder. Registrering av en kilde endrer ikke automatisk evidensnivå eller økonomiske tall.
 
 Risiko og avhengigheter endrer ikke økonomiske resultater automatisk. Åpne risikoer med høy konsekvens flagges uavhengig av sannsynlighet; dette er ingen beregnet risikoscore. Juster churn-, rekkevidde-, kostnads- og tidsanslag manuelt når risikovurderingen gir grunnlag for det. Eksempelrisikoene er illustrative. Manglende registrering betyr ikke at et tiltak er risikofritt.
 
@@ -67,7 +67,7 @@ Veikartet og scenariosammenligningen ligger på samme side som porteføljen og b
 
 Et enablende tiltak er ikke en egen type. Det er et tiltak med null churn-effekt som et annet tiltak forutsetter; gevinsten blir null av seg selv. På tiltaket som forutsettes vises «låser opp» — summen av nettoverdien til tiltakene det gjør mulig. Beløpet summeres aldri inn i porteføljen eller i en scenariototal, og det overlapper mellom ledd i en kjede: hvis A låser opp B som låser opp C, telles C i både A og B. En sum på tvers ville derfor vært meningsløs.
 
-Scenarioene er ordnede lister. Arbeidet skjer sekvensielt, ett tiltak av gangen, og hvert tiltak bruker sin egen kalendertid fra teamdataene. Landingsmåneden er der effekten starter. Kurven er kumulativ nettoverdi måned for måned: bruttogevinst delt på 12 og årlige driftskostnader delt på 12 løper fra landing, lønn fordeles over arbeidsmånedene, og engangskostnaden belastes ved oppstart. Et tiltak som lander etter måned 24 bidrar med null; det klippes ikke inn i horisonten.
+Scenarioene er ordnede lister. Arbeidet følger scenarioets WIP-grense og tapstabellen i parametrene; med WIP 1 skjer det sekvensielt. Hvert tiltak bruker sin egen kalendertid fra teamdataene. Landingsmåneden er der effekten starter. Kurven er kumulativ nettoverdi måned for måned: bruttogevinst delt på 12 og årlige driftskostnader delt på 12 løper fra landing, lønn fordeles over arbeidsmånedene, og engangskostnaden belastes ved oppstart. Et tiltak som lander etter måned 24 bidrar med null; det klippes ikke inn i horisonten.
 
 **Veikartets tall er ikke porteføljens tall.** Porteføljen viser alltid ett helt driftsår per tiltak. Veikartet viser bare det som rekker å inntreffe innen 24 måneder i den valgte rekkefølgen — det kan bli både mindre (sen landing) og mer (over ett års drift innenfor horisonten). Begge vises ved siden av hverandre i tabellen under kurven. Forskjellen mellom to scenarioer er alternativkostnaden; ikke legg en egen utsettelsesberegning oppå. Summene er ikke korrigert for overlapp mellom tiltak.
 
@@ -97,6 +97,8 @@ Alt du skriver inn lagres automatisk i **din egen nettleser** (`localStorage`), 
 - **Importer fra fil** leser en slik fil tilbake. Filen valideres først: feil app, feil versjon eller feil struktur avvises, og ingenting endres.
 - **Nullstill** sletter lagret data og henter eksempeldataene tilbake. Krever bekreftelse i to steg.
 
+Denne utgaven bruker **lagringsversjon 2**. Versjon 1 avvises med forklaring. Ved avvist lokal lagring stoppes automatisk lagring, slik at gamle data ikke overskrives av eksempeldata. Porteføljens eksportknapp laster da ned den opprinnelige lagringen. Bruk tidligere utgave for å arbeide videre med versjon 1, eller nullstill eksplisitt for å starte på nytt.
+
 Lagret data har et versjonsnummer. Endres datamodellen senere, avvises gammel data med en forklaring i stedet for å lastes halvveis inn — en halvt gjenopprettet arbeidsflate er farligere enn eksempeldata.
 
 Nettleserlagring kan feile: privat modus, full kvote eller blokkerte nettsteddata. Appen fanger det, sier fra i statuslinjen og fortsetter å virke i minnet. Får du den meldingen, eksporter til fil.
@@ -111,7 +113,13 @@ Kundeverdien settes **sammen av deler** i stedet for som ett fritt tall: dekning
 
 Tiltak arver standarden. Endrer du den, følger alle tiltak som ikke har satt sin egen verdi automatisk med. Tiltak som **har** satt sin egen verdi røres aldri — de beholder den og listes som avvik («Foreldrekontroll: 5 500 kr mot standard 6 000 kr»). I tiltaksdialogen er kundeverdifeltet låst til standarden inntil du huker av for egen verdi.
 
-Ukesats, tapstabellen for kontekstbytte og horisonten er **ikke** samlet her ennå; se kjente begrensninger.
+Tapstabellen for kontekstbytte kan redigeres i parameterpanelet, med gjennomstrømning ved siden av hvert nivå. Ett tiltak har 0 % tap som referanse; 2–5 samtidige kan justeres fra 0 til under 100 %. Ved 6–8 brukes tapet ved fem. Ugyldige verdier endrer ikke beregningen. Veikartet bruker tabellen i både kurver og plasseringssignaler. Laben har samme kontroll, men egne lagrede verdier.
+
+Ukesats settes én gang per rolle under «Roller, ferdigheter og kapasitet», lenket fra parametrene. Teamrader arver rollens sats. «Egen ukesats» beholder radens verdi når standarden endres, og avvik vises i parameterpanelet. Bytter du rolle uten overstyring, følger satsen den nye rollen. Slettet rolle beholder siste sats og vises som uavklart og ufordelt etterspørsel. Oppgaver endrer fortsatt ingen kostnader.
+
+Key results har startverdi, siste måling, mål, enhet, måledato og kilde/notat. Fremdrift = (siste måling − startverdi) / (mål − startverdi), også for synkende mål. Tilbakegang og overoppfyllelse vises som faktiske prosenter; manglende måling eller lik start/mål gir ingen prosent. Eksempeldataene har ingen registrert måling. Fremdrift påvirker aldri økonomien.
+
+Horisonten er fortsatt 24 måneder og ikke konfigurerbar.
 
 ## Nåkostnader
 
@@ -153,7 +161,7 @@ Porteføljen står bevisst utenfor: den svarer på «hva er dette tiltaket verdt
 - Sett av innsats til et valideringsløp med ansvar, målepunkt, risiko og stopp-/videreføringskriterium. Innsiktsarbeid tilfører kostnad, ingen automatisk gevinst.
 - Knytt flere dokumentlenker til hvert alternativ og kundeproblemet: én linje per referanse, `Tittel | https://…`.
 
-Laben bruker 52 uker fra felles start, sekvensielt arbeid i ett team og en konstant årlig gevinst/driftskostnad etter ferdigstillelse. Lav verdi bruker lav gevinst, høy innsats og senere ferdigstillelse; høy verdi bruker høy gevinst og lav innsats. Hele gjennomføringskostnaden belastes. Kapasitetsbrudd vises, også for høyt innsatsanslag. Dette er ikke en optimaliseringsmotor, og avhengigheter er kvalitative. Ikke-valgte alternativer gjennomføres ikke innen horisonten i planberegningen. Forsinkelsesberegningen er et separat kontrafaktisk eksempel og må ikke legges til forskjellen mellom planene. Scenarioer må ikke tolkes som sannsynligheter. Problemkostnad/potensial inngår ikke i tiltaksverdiene.
+Laben bruker 24 måneder fra felles start, én felles teamkapasitet og valgt WIP/tapstabell, med konstant årlig gevinst/driftskostnad etter ferdigstillelse. Lav verdi bruker lav gevinst, høy innsats og senere ferdigstillelse; høy verdi bruker høy gevinst og lav innsats. Hele gjennomføringskostnaden belastes. Kapasitetsbrudd vises, også for høyt innsatsanslag. Dette er ikke en optimaliseringsmotor, og avhengigheter er kvalitative. Ikke-valgte alternativer gjennomføres ikke innen horisonten i planberegningen. Forsinkelsesberegningen er et separat kontrafaktisk eksempel og må ikke legges til forskjellen mellom planene. Scenarioer må ikke tolkes som sannsynligheter. Problemkostnad/potensial inngår ikke i tiltaksverdiene.
 
 Labens nye filer er `decision-model.mjs`, `decision-app.js`, `decision.css`, `document-links.mjs` og `prioritering.html`. Metodekilder til alternativvurdering/evaluering ligger i sidens metodeavsnitt, og underbygger ikke de illustrative tallene.
 

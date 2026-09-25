@@ -1,7 +1,8 @@
 import {scenario,horizons,evidence,strategicFit} from './model.mjs';
-import {seedRoadmap,keyResults,scenarioCurve,compareScenarios,unlocks,coverage,placementSignals,validateRoadmap,suggestedOrder,breakEvenMonth,throughput,switchingLoss,HORIZON_MONTHS} from './roadmap-model.mjs';
+import {seedRoadmap,keyResultProgress,keyResults,scenarioCurve,compareScenarios,unlocks,coverage,placementSignals,validateRoadmap,suggestedOrder,breakEvenMonth,throughput,switchingLoss,HORIZON_MONTHS} from './roadmap-model.mjs';
 import {doNothingCurve} from './problems.mjs';
 import {currentProblems,baselineVisible} from './problems-ui.mjs';
+import {currentParameters} from './parameters-ui.mjs';
 const $=id=>document.getElementById(id);
 const number=(v,d=0)=>new Intl.NumberFormat('nb-NO',{maximumFractionDigits:d,minimumFractionDigits:d}).format(v);
 const compact=v=>Math.abs(v)>=1000000?number(v/1000000,2)+' mill.':Math.abs(v)>=1000?number(v/1000,0)+' tusen':number(v);
@@ -19,6 +20,11 @@ export function renderRoadmap(){renderStrategy();renderBoard();renderScenarios()
 export const snapshotRoadmap=()=>({roadmap,compare});
 export function restoreRoadmap(data){if(data?.roadmap)roadmap=data.roadmap;if(data?.compare)compare=data.compare;}
 
+function progressMarkup(k){
+ const p=keyResultProgress(k);
+ if(p.percent===null)return {missing:'Legg inn startverdi, siste måling og mål for å se fremdrift.',equal:'Startverdi og mål er like. Velg et mål som viser ønsket endring.',invalid:'Måltallene må være gyldige tall.'}[p.state];
+ return `<strong>${number(p.percent,1)} % av ønsket endring</strong> · ${p.state==='achieved'?'Målet er nådd':p.state==='regressed'?'Tilbakegang fra startverdien':'På vei mot målet'}<progress max="100" value="${Math.max(0,Math.min(100,p.percent))}" aria-label="Fremdrift for ${esc(k.title)}"></progress>`;
+}
 function renderStrategy(){
  if($('vision').value!==roadmap.vision.statement)$('vision').value=roadmap.vision.statement;
  $('objective-list').innerHTML=roadmap.objectives.map(o=>`<div class="objective" data-objective-id="${esc(o.id)}">
@@ -28,7 +34,7 @@ function renderStrategy(){
   ${o.keyResults.length?o.keyResults.map(k=>{const linked=items().filter(t=>(t.keyResultIds??[]).includes(k.id));
    return `<div class="key-result" data-kr-id="${esc(k.id)}"><label>Key result<input data-field="krTitle" value="${esc(k.title)}" maxlength="200"></label>
    <span class="kr-coverage${linked.length?'':' uncovered'}">${linked.length?esc(linked.map(t=>t.name).join(', ')):'Ingen tiltak'}</span>
-   <button type="button" class="danger" data-remove-kr="${esc(k.id)}">${removeLabel('kr:'+k.id)}</button></div>`}).join(''):'<p class="field-help">Ingen key results ennå.</p>'}
+   <button type="button" class="danger" data-remove-kr="${esc(k.id)}">${removeLabel('kr:'+k.id)}</button><div class="kr-tracking"><div class="kr-fields">${[['baseline','Startverdi'],['current','Siste måling'],['target','Mål']].map(([field,label])=>`<label>${label}<input type="number" step="any" data-field="${field}" value="${esc(k[field]??'')}"></label>`).join('')}<label>Enhet<input data-field="unit" value="${esc(k.unit??'')}" maxlength="40" placeholder="%, kunder, minutter …"></label><label>Måledato<input type="date" data-field="measuredAt" value="${esc(k.measuredAt??'')}"></label><label>Kilde / målenotat<input data-field="measurementNote" value="${esc(k.measurementNote??'')}" maxlength="300" placeholder="Illustrativt anslag eller målekilde"></label></div><div class="kr-status" role="status">${progressMarkup(k)}</div></div></div>`}).join(''):'<p class="field-help">Ingen key results ennå.</p>'}
  </div>`).join('')||'<p class="field-help">Ingen objectives ennå. Legg til ett for å koble tiltakene til et målbilde.</p>';
  const c=coverage(roadmap,items());
  const line=(label,list)=>list.length?`<span><strong>${label}:</strong> ${esc(list.join(', '))}</span>`:'';
@@ -70,20 +76,20 @@ function renderScenarios(){
  if(!a||!b||error){$('scenario-curve').innerHTML='';$('scenario-columns').innerHTML='';$('scenario-rows').innerHTML='';
   if(!error)$('scenario-error').textContent='Velg to scenarioer å sammenligne.';return;}
  const wipOf=s=>Math.max(1,Math.round(s.wip||1));
- const cmp=compareScenarios(a.order,b.order,all,'expected',{wip:wipOf(a)},{wip:wipOf(b)});
+ const cmp=compareScenarios(a.order,b.order,all,'expected',{wip:wipOf(a),losses:currentParameters().losses},{wip:wipOf(b),losses:currentParameters().losses});
  renderCurve(cmp,a,b);
  $('scenario-columns').innerHTML=[[a,cmp.a,'a'],[b,cmp.b,'b']].map(([s,result,side])=>`<div class="scenario-column" data-scenario-id="${esc(s.id)}">
   <div class="scenario-column-head"><span class="scenario-key scenario-${side}"></span><h3 class="scenario-title"><input data-scenario-name="${esc(s.id)}" value="${esc(s.name)}" maxlength="80" aria-label="Navn på scenario"></h3><button type="button" class="danger" data-remove-scenario="${esc(s.id)}">${removeLabel('sc:'+s.id)}</button>
   <strong class="${result.net<0?'negative':'positive'}">${money(result.net)}</strong><small>kumulativt over ${HORIZON_MONTHS} måneder${breakEvenMonth(result.curve)===null?' · går ikke i null innen horisonten':' · i null fra måned '+breakEvenMonth(result.curve)}</small></div>
   <div class="wip-control"><label>Samtidige tiltak<input type="number" min="1" max="8" step="1" value="${wipOf(s)}" data-wip="${esc(s.id)}"></label>
-   <span class="wip-readout">${wipOf(s)===1?'Én av gangen · ingen kontekstbytte':`${Math.round(switchingLoss(wipOf(s))*100)} % av tiden går til kontekstbytte · gjennomstrømning ${number(throughput(wipOf(s)),2)}×`}<a href="faq.html" target="_blank" rel="noopener">Hvor kommer tallet fra? ↗</a></span></div>
+   <span class="wip-readout">${wipOf(s)===1?'Én av gangen · ingen kontekstbytte':`${Math.round(switchingLoss(wipOf(s),currentParameters().losses)*100)} % av tiden går til kontekstbytte · gjennomstrømning ${number(throughput(wipOf(s),currentParameters().losses),2)}×`}<a href="faq.html" target="_blank" rel="noopener">Hvor kommer tallet fra? ↗</a></span></div>
   <p class="field-help">${esc(s.note??'')}</p>
   ${s.order.length?s.order.map((id,i)=>{const row=result.rows[i];
    return `<div class="scenario-item"><span class="scenario-pos">${i+1}</span><div><strong>${esc(measureName(id))}</strong><small>${row.beyondHorizon?'Lander etter horisonten':`Lander måned ${row.landing} · ${row.effectMonths} mnd effekt`}</small></div>
    <div class="scenario-item-actions"><button type="button" data-move="up" data-scenario="${esc(s.id)}" data-id="${esc(id)}" aria-label="Flytt opp"${i===0?' disabled':''}>↑</button><button type="button" data-move="down" data-scenario="${esc(s.id)}" data-id="${esc(id)}" aria-label="Flytt ned"${i===s.order.length-1?' disabled':''}>↓</button><button type="button" class="danger" data-drop="${esc(id)}" data-scenario="${esc(s.id)}" aria-label="Fjern">×</button></div></div>`}).join(''):'<p class="field-help">Ingen tiltak i dette scenarioet.</p>'}
   <label class="scenario-add">Legg til tiltak<select data-add-to="${esc(s.id)}"><option value="">Velg tiltak …</option>${all.filter(t=>!s.order.includes(t.id)).map(t=>`<option value="${esc(t.id)}">${esc(t.name)}</option>`).join('')}</select></label>
  </div>`).join('');
- const signals=[...placementSignals(a.order,all,'expected',{wip:wipOf(a)}).map(s=>[a.name,s]),...placementSignals(b.order,all,'expected',{wip:wipOf(b)}).map(s=>[b.name,s])];
+ const signals=[...placementSignals(a.order,all,'expected',{wip:wipOf(a),losses:currentParameters().losses}).map(s=>[a.name,s]),...placementSignals(b.order,all,'expected',{wip:wipOf(b),losses:currentParameters().losses}).map(s=>[b.name,s])];
  $('scenario-rows').innerHTML=`<div class="table-scroll"><table class="resource-table"><thead><tr><th>Tiltak</th><th>Scenario</th><th>Lander</th><th>Effektmåneder</th><th>Porteføljeverdi<small>12 mnd</small></th><th>Bidrag i veikartet<small>${HORIZON_MONTHS} mnd</small></th></tr></thead><tbody>${
   [[a,cmp.a],[b,cmp.b]].flatMap(([s,result])=>result.rows.map(r=>`<tr><th scope="row">${esc(r.name)}</th><td>${esc(s.name)}</td><td>${r.beyondHorizon?'Etter horisonten':'Måned '+r.landing}</td><td>${r.effectMonths}</td><td>${money(r.portfolioNet)}</td><td class="${r.horizonNet<0?'negative':'positive'}">${money(r.horizonNet)}</td></tr>`)).join('')
   ||'<tr><td colspan="6">Ingen tiltak i scenarioene.</td></tr>'}</tbody></table></div>
@@ -149,13 +155,21 @@ export function bindRoadmap(getItems,onSelect,onRerender){
   const field=e.target.dataset.field;if(!field)return;
   const objective=roadmap.objectives.find(o=>o.id===e.target.closest('[data-objective-id]').dataset.objectiveId);
   if(field==='title')objective.title=e.target.value;
-  else objective.keyResults.find(k=>k.id===e.target.closest('[data-kr-id]').dataset.krId).title=e.target.value;
+  else{
+   const row=e.target.closest('[data-kr-id]'),kr=objective.keyResults.find(k=>k.id===row.dataset.krId);
+   if(['baseline','current','target'].includes(field)){
+    if(e.target.validity.badInput){e.target.setAttribute('aria-invalid','true');row.querySelector('.kr-status').textContent='Måltallet må være et gyldig tall. Sist gyldige verdi er beholdt.';return}
+    kr[field]=e.target.value===''?null:e.target.valueAsNumber;
+    e.target.removeAttribute('aria-invalid');
+   }else kr[field==='krTitle'?'title':field]=e.target.value;
+   row.querySelector('.kr-status').innerHTML=progressMarkup(kr);
+  }
   renderBoard();renderScenarios();
  });
  $('objective-list').addEventListener('click',e=>{
   const button=e.target.closest('button');if(!button)return;
   const {addKr,removeObjective,removeKr}=button.dataset;
-  if(addKr){armed=null;roadmap.objectives.find(o=>o.id===addKr).keyResults.push({id:uid(),title:'Nytt key result',note:''})}
+  if(addKr){armed=null;roadmap.objectives.find(o=>o.id===addKr).keyResults.push({id:uid(),title:'Nytt key result',note:'',baseline:null,current:null,target:null,unit:'',measuredAt:'',measurementNote:''})}
   if(removeObjective){if(!confirmRemove('obj:'+removeObjective))return;roadmap.objectives=roadmap.objectives.filter(o=>o.id!==removeObjective)}
   if(removeKr){if(!confirmRemove('kr:'+removeKr))return;for(const o of roadmap.objectives)o.keyResults=o.keyResults.filter(k=>k.id!==removeKr)}
   refresh();
