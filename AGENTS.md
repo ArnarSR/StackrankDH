@@ -12,7 +12,7 @@ Hele grensesnittet og all dokumentasjon er på **norsk**. Beløp i **NOK**, form
 
 ```
 npm start    # Python 3 sin HTTP-server på http://127.0.0.1:4173, serverer dist/
-npm test     # node --test, 101 tester, ingen avhengigheter
+npm test     # node --test, 114 tester, ingen avhengigheter
 ```
 
 **Ingen npm-pakker, ingen byggefase, ingen rammeverk.** Ren HTML/CSS/ES-moduler servert direkte fra `dist/`. Dette er et bevisst premiss — ikke innfør en bundler, TypeScript eller et rammeverk uten å spørre først.
@@ -67,25 +67,15 @@ Alt av tilstand ligger i minnet i modulvariabler og lagres via `snapshot()`/`res
 
 ## Hva som bør gjøres
 
-Prioritert. De tre første er avgrensede og trygge; resten krever en beslutning før koding.
+De tre første oppgavene er levert 25.09.2026:
 
-### 1. Eksponer tapstabellen for kontekstbytte
+1. Redigerbar tapstabell med gjennomstrømning i porteføljens parametre og separat i laben. Felles kontroll i `switching-ui.mjs`, validering i `timeline.mjs`.
+2. Ukesats per rolle med `applyWeeklyRates` og `rateDrift`, eksplisitt overstyring per teamrad. Redigering bevarer rollekoblinger og oppgaver.
+3. Startverdi, måling, mål, enhet, måledato og kildenotat på key results. `keyResultProgress` viser også tilbakegang og overoppfyllelse, uten kobling til økonomien.
 
-`README.md` og `dist/faq.html` sier begge at Weinberg-tallene er «justerbare». Modellen støtter det (`losses`-parameteren i `timeline.mjs`), men **det finnes ingen kontroll i grensesnittet**, så tallene er i praksis låst. Dokumentasjonen lover altså noe produktet ikke gjør.
+Lagringsversjonen er 2. Avvist gammel lagring skal aldri overskrives automatisk; porteføljens eksportknapp tar da kopi av de gamle rådataene.
 
-Legg en redigerbar tapstabell i parameterpanelet, og la den flyte gjennom til `scheduleWork`. Vis gjennomstrømningen (`throughput`) ved siden av, så den omvendte U-en blir synlig.
-
-### 2. Samle ukesats i parametrene
-
-Ukesats settes i dag på hver teamrad — 9 steder i eksempeldataene alene. Flytt den til rollelisten i `roster.mjs` med mulighet for å overstyre per rad.
-
-**Gjenbruk mønsteret fra kundeverdi** i `parameters.mjs`: standard arves, overstyring røres aldri, og avvik listes synlig (`valueDrift`). Ikke oppfinn et nytt mønster.
-
-### 3. Måltall og fremdrift på key results
-
-Ble utelatt fordi det krevde lagring. Lagring finnes nå, så dette er ikke lenger blokkert. Key results ligger i `roadmap-model.mjs` (`seedRoadmap`, `keyResults`, `coverage`).
-
-Merk regel 1: måltall skal ikke kobles inn i noen økonomisk beregning.
+Gjenstående punkter krever beslutning før koding:
 
 ### 4. Overlapp mellom tiltak — krever beslutning først
 

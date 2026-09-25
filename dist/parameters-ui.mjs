@@ -1,12 +1,13 @@
 import {seedParameters,customerValue,applyCustomerValue,valueDrift,validateParameters,VALUE_HORIZON_MONTHS} from './parameters.mjs';
+import {bindSwitchingLosses} from './switching-ui.mjs';
 const $=id=>document.getElementById(id);
 const number=(v,d=0)=>new Intl.NumberFormat('nb-NO',{maximumFractionDigits:d,minimumFractionDigits:d}).format(v);
 const money=v=>number(v)+' kr';
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-let parameters=seedParameters(),readItems=()=>[];
+let parameters=seedParameters(),readItems=()=>[],refreshLosses=()=>{};
 export const currentParameters=()=>parameters;
 export const snapshotParameters=()=>parameters;
-export function restoreParameters(data){if(data)parameters=data;}
+export function restoreParameters(data){if(data){parameters={...seedParameters(),...data};refreshLosses()}}
 export const standardCustomerValue=()=>customerValue(parameters).total;
 
 export function renderParameters(){
@@ -24,6 +25,7 @@ export function renderParameters(){
 }
 export function bindParameters(getItems,onChange){
  readItems=getItems;
+ refreshLosses=bindSwitchingLosses($('switching-parameters'),()=>parameters.losses,losses=>{parameters.losses=losses},onChange);
  const fields=[['value-monthly','monthlyContribution'],['value-months','months'],['value-winback','winbackCost']];
  for(const [id,key] of fields)$(id).addEventListener('input',e=>{
   parameters.customerValue[key]=e.target.valueAsNumber;

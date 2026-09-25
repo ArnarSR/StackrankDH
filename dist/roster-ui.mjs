@@ -1,4 +1,4 @@
-import {seedRoster,roleDemand,measureRoles,taskBreakdown,taskStatuses,roleName,validateRoster} from './roster.mjs';
+import {seedRoster,roleDemand,measureRoles,taskBreakdown,taskStatuses,roleName,validateRoster,applyWeeklyRates,rateDrift} from './roster.mjs';
 import {parseRepo,issueUrl,safeIssueUrl,tasksToCsv} from './github.mjs';
 const $=id=>document.getElementById(id);
 const number=(v,d=0)=>new Intl.NumberFormat('nb-NO',{maximumFractionDigits:d,minimumFractionDigits:d}).format(v);
@@ -11,11 +11,12 @@ export function restoreRoster(data){if(data?.roster)roster=data.roster;if(data?.
 export const githubSettings=()=>github;
 const removeLabel=key=>armed===key?'Bekreft':'Fjern';
 
-export function renderRoster(){renderRoleRows();renderCapacity();}
+export function renderRoster(){if(!$('role-rows').contains(document.activeElement)||document.activeElement.tagName!=='INPUT')renderRoleRows();renderCapacity();}
 function renderRoleRows(){
  $('role-rows').innerHTML=roster.roles.map(role=>`<div class="role-row" data-role-id="${esc(role.id)}">
   <label class="role-name">Rolle<input data-field="name" value="${esc(role.name)}" maxlength="80"></label>
   <label>Kapasitet (FTE)<input data-field="capacity" type="number" min="0" max="1000" step="0.1" value="${role.capacity}"></label>
+  <label>Ukesats (kr)<input data-field="weeklyRate" type="number" min="0" step="any" value="${role.weeklyRate}" required></label>
   <label class="role-skills">Ferdigheter<input data-field="skills" value="${esc((role.skills??[]).join(', '))}" maxlength="200" placeholder="Komma mellom hver"></label>
   <button type="button" class="danger" data-remove-role="${esc(role.id)}">${removeLabel('role:'+role.id)}</button>
  </div>`).join('')||'<p class="field-help">Ingen roller definert ennå.</p>';
@@ -23,6 +24,8 @@ function renderRoleRows(){
 // Skilles ut, slik at skriving i en rollerad ikke river vekk feltet man står i.
 function renderCapacity(){
  const items=readItems();
+ const drift=rateDrift(items,roster);
+ $('rate-drift').innerHTML=drift.length?drift.map(d=>`<span>${esc(d.name)} / ${esc(d.team)}: ${number(d.value)} kr${d.standard===null?' · mangler rolle, beholdt sats må avklares':` mot standard ${number(d.standard)} kr (${d.diff>0?'+':''}${number(d.diff)} kr)`}</span>`).join(''):'Alle teamrader følger rollens standard eller har samme sats.';
  const {roles,unassigned}=roleDemand(items,roster);
  const error=validateRoster(roster);
  $('roster-error').textContent=error;
@@ -81,12 +84,16 @@ export function renderTasks(t){
 export function bindRoster(getItems,onChange){
  readItems=getItems;
  const refresh=()=>{renderRoster();onChange?.()};
- $('add-role').addEventListener('click',()=>{armed=null;roster.roles.push({id:uid(),name:'Ny rolle',capacity:1,skills:[],note:''});refresh()});
+ $('add-role').addEventListener('click',()=>{armed=null;roster.roles.push({id:uid(),name:'Ny rolle',capacity:1,weeklyRate:30000,skills:[],note:''});refresh()});
  $('role-rows').addEventListener('input',e=>{
   const field=e.target.dataset.field;if(!field)return;
   const role=roster.roles.find(r=>r.id===e.target.closest('[data-role-id]').dataset.roleId);
   if(field==='skills')role.skills=e.target.value.split(',').map(s=>s.trim()).filter(Boolean);
   else if(field==='capacity')role.capacity=e.target.valueAsNumber;
+  else if(field==='weeklyRate'){
+   if(!Number.isFinite(e.target.valueAsNumber)||e.target.valueAsNumber<0){e.target.setAttribute('aria-invalid','true');$('roster-error').textContent='Ukesatsen må være 0 eller større. Sist gyldige sats brukes.';return}
+   e.target.removeAttribute('aria-invalid');role.weeklyRate=e.target.valueAsNumber;applyWeeklyRates(readItems(),roster);
+  }
   else role.name=e.target.value;
   renderCapacity();onChange?.();
  });

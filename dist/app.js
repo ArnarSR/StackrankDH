@@ -12,6 +12,7 @@ import {snapshotRoadmap,restoreRoadmap} from './roadmap-ui.mjs';
 import {snapshotRoster,restoreRoster} from './roster-ui.mjs';
 import {snapshotProblems,restoreProblems} from './problems-ui.mjs';
 import {snapshotParameters,restoreParameters,currentParameters} from './parameters-ui.mjs';
+import {applyWeeklyRates} from './roster.mjs';
 const $=id=>document.getElementById(id);
 const number=(v,d=0)=>new Intl.NumberFormat('nb-NO',{maximumFractionDigits:d,minimumFractionDigits:d}).format(v);
 const money=v=>number(v)+' kr';
@@ -24,6 +25,7 @@ let productCustomers=250000;
 let items=structuredClone(examples),selected=items[0].id,editing=null,deleteArmed=false;
 const formValidation=createFormValidation($('form'),readDraft);
 function render(){
+ applyWeeklyRates(items,currentRoster());
  renderProductWarnings();
  const sorted=sortMeasures(items,$('sort').value);const totals=items.reduce((a,t)=>{const c=calculate(t);a.net+=c.net;a.low+=scenario(t,'low').net;a.high+=scenario(t,'high').net;a.retained+=c.retained;a.cost+=c.cost;return a},{net:0,low:0,high:0,retained:0,cost:0});
  const cards=[['Forventet nettoverdi',compact(totals.net)+' kr','Sum av enkeltstående tiltak','highlight'],['Beholdte kunder',number(totals.retained),'Forventet · før korreksjon for overlapp',''],['Tiltakskostnad, første år',compact(totals.cost)+' kr','Tjenester, engangsposter og teaminnsats',''],['Tiltak med positivt lavscenario',items.filter(t=>scenario(t,'low').net>0).length+' av '+items.length,'Nettoverdi over null i lavscenarioet','']];
@@ -56,7 +58,7 @@ function focusSelected(){document.querySelector(`[data-select="${selected}"]`)?.
  $('edit-resources').addEventListener('click',()=>{openEditor(selected);$('resource-editor-section').scrollIntoView({block:'start'});});
  $('sort').addEventListener('change',render);$('sensitivity').addEventListener('input',updateSensitivity);$('add').addEventListener('click',()=>openEditor());$('edit').addEventListener('click',()=>openEditor(selected));$('close').addEventListener('click',closeEditor);$('cancel').addEventListener('click',closeEditor);
  function readDraft(){const raw=Object.fromEntries(new FormData($('form')));const t={...raw,...readResourceEditor(),...readMeasureRoadmapFields($('form')),valueOverride:$('form').elements.namedItem('valueOverride')?.checked??false,cost:0,setup:0,productCustomers,id:editing??'draft',name:(raw.name??'').trim()};['customers','reach','baseline','value','low','expected','high'].forEach(k=>t[k]=raw[k]?.trim()===''?NaN:Number(raw[k]));return applyValueChoice(t);}
- $('form').addEventListener('submit',e=>{e.preventDefault();if(!formValidation.check())return;const t=readDraft();if(!editing)t.id=crypto.randomUUID();if(editing)items=items.map(x=>x.id===editing?t:x);else items.push(t);selected=t.id;closeEditor();render();$('live').textContent='Tiltaket er lagret for denne økten.';});
+ $('form').addEventListener('submit',e=>{e.preventDefault();if(!formValidation.check())return;const t=readDraft();if(!editing)t.id=crypto.randomUUID();if(editing)items=items.map(x=>x.id===editing?t:x);else items.push(t);selected=t.id;closeEditor();render();$('live').textContent='Tiltaket er oppdatert. Lagringsstatus vises øverst.';});
  $('delete').addEventListener('click',()=>{if(!deleteArmed){deleteArmed=true;$('delete').textContent='Bekreft sletting';$('form-error').textContent='Klikk «Bekreft sletting» for å fjerne tiltaket.';return}items=items.filter(x=>x.id!==editing);selected=items[0]?.id;closeEditor();render();$('add').focus();$('live').textContent='Tiltaket er slettet.'});
 $('edit-evidence').addEventListener('click',()=>{openEditor(selected);$('source-editor-section').scrollIntoView({block:'start',behavior:'instant'});});
 $('product-customers').addEventListener('input',()=>{const el=$('product-customers');if(!el.validity.valid){el.setAttribute('aria-invalid','true');$('product-warning').textContent='Antall kunder må være et heltall mellom 0 og 1 000 000 000. Beregningene bruker sist gyldige kundebase.';return;}el.removeAttribute('aria-invalid');productCustomers=el.valueAsNumber;render();});
@@ -66,14 +68,15 @@ function renderProductWarnings(){const outside=items.filter(t=>t.customers>produ
 function snapshot(){currentParameters().product.customers=productCustomers;
  return {items,...snapshotRoadmap(),...snapshotRoster(),...snapshotProblems(),parameters:snapshotParameters()};}
 function applyWorkspace(w){
- if(Array.isArray(w.items)&&w.items.length){items=w.items;selected=items[0].id}
+ if(Array.isArray(w.items)){items=w.items;selected=items[0]?.id}
  restoreRoadmap(w);restoreRoster(w);restoreProblems(w);restoreParameters(w.parameters);
  const base=currentParameters()?.product?.customers;
  if(Number.isInteger(base)&&base>=0){productCustomers=base;$('product-customers').value=base}
 }
-let saveTimer=null,storageNote='';
+let saveTimer=null,storageNote='',storageBlocked=false;
 function setStorageState(state,detail){$('storage-state').textContent=state;$('storage-detail').textContent=detail;}
 function saveNow(){
+ if(storageBlocked)return;
  const result=safeWrite(STORAGE_KEY,snapshot());
  if(result.ok)setStorageState('Lagret i denne nettleseren',storageNote||'Endringene dine er her neste gang du åpner siden på denne maskinen.');
  else $('storage-error').textContent='Kunne ikke lagre: '+result.error+' Eksporter til fil for å ta vare på arbeidet.';
@@ -81,13 +84,18 @@ function saveNow(){
 function saveSoon(){clearTimeout(saveTimer);saveTimer=setTimeout(saveNow,400);}
 function loadStored(){
  const result=safeRead(STORAGE_KEY);
- if(!result.ok){$('storage-error').textContent='Tidligere lagret data kunne ikke leses: '+result.error+' Eksempeldataene vises i stedet.';return false}
+ if(!result.ok){storageBlocked=true;setStorageState('Automatisk lagring er stoppet','Tidligere lagring er beholdt. Eksporter den før nullstilling.');$('storage-error').textContent='Tidligere lagret data kunne ikke leses: '+result.error+' Eksempeldataene vises uten å overskrive lagringen. Eksporter tidligere lagring før du nullstiller.';return false}
  if(!result.workspace)return false;
  applyWorkspace(result.workspace);
  storageNote='Sist lagret '+new Date(result.savedAt??Date.now()).toLocaleString('nb-NO')+'.';
  return true;
 }
 function downloadWorkspace(){
+ if(storageBlocked){
+  try{const raw=localStorage.getItem(STORAGE_KEY);if(!raw)throw new Error('Ingen tidligere lagring er tilgjengelig.');const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([raw],{type:'application/json'}));a.download='churn-studio-tidligere-lagring.json';a.click();URL.revokeObjectURL(a.href)}
+  catch(e){$('storage-error').textContent='Kunne ikke eksportere tidligere lagring: '+e.message}
+  return;
+ }
  const blob=new Blob([JSON.stringify(makeEnvelope(snapshot()),null,1)],{type:'application/json'});
  const url=URL.createObjectURL(blob);
  const a=document.createElement('a');a.href=url;a.download=exportName();a.click();
@@ -101,7 +109,7 @@ $('import-workspace').addEventListener('change',async e=>{
  $('storage-error').textContent='';
  const result=parseEnvelope(await file.text());
  if(!result.ok){$('storage-error').textContent='Import avvist: '+result.error+' Ingenting er endret.';return}
- applyWorkspace(result.workspace);
+ storageBlocked=false;applyWorkspace(result.workspace);
  storageNote='Importert fra '+file.name+'.';
  render();saveNow();
  $('live').textContent='Arbeidsflaten er importert.';
@@ -120,7 +128,7 @@ document.addEventListener('change',saveSoon,true);
 document.addEventListener('click',saveSoon,true);
 loadStored();
 bindRoadmap(()=>items,select);
-bindRoster(()=>items,()=>{if(items.length)renderTasks(items.find(x=>x.id===selected)??items[0])});
+bindRoster(()=>items,()=>render());
 bindProblems(()=>items,()=>renderRoadmap());
 bindBaselineToggle(()=>renderRoadmap());
 bindParameters(()=>items,()=>render());

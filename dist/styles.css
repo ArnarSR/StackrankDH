@@ -214,3 +214,25 @@
 .storage-bar .error{width:100%;margin-top:8px;font-size:12px;line-height:1.5}
 .lab-storage-note{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;background:white;border:1px solid var(--line);border-radius:8px;padding:11px 15px;margin-bottom:14px;font-size:12px;color:#5d6e76}
 .lab-storage-note .danger{font-size:12px;padding:7px 11px;border:1px solid #e4c9c5;border-radius:6px;background:white}
+
+/* Felles forutsetninger og mål må også kunne redigeres på smale skjermer. */
+.switching-parameters,.rate-parameters{grid-column:1/-1;border-top:1px solid #dce5e8;padding-top:20px;min-width:0}
+.panel.switching-parameters{padding:24px}
+.switching-parameters h3,.rate-parameters h3{margin:0 0 8px}
+.switching-parameters p,.rate-parameters p{color:#53666f;font-size:13px;line-height:1.6}
+.switching-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px;margin:16px 0}
+.switching-grid label{display:grid;gap:7px;font-size:13px;color:#334b56}
+.switching-grid input{width:100%;min-width:0;border:1px solid #a9bdc6;border-radius:6px;padding:10px;font:inherit;color:#183543;background:white}
+.switching-grid small{line-height:1.6}
+.role-row{grid-template-columns:1.4fr .7fr .9fr 2fr auto}
+.kr-fields{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;width:100%}
+.key-result{flex-wrap:wrap}
+.kr-tracking{flex-basis:100%;min-width:0}
+.kr-tracking label{display:grid;gap:6px;font-size:12px;color:#334b56}
+.kr-status{margin:10px 0;color:#334b56;font-size:13px;line-height:1.6}
+.kr-status progress{width:100%;accent-color:#2d7a64}
+@media(max-width:900px){.role-row{grid-template-columns:1fr 1fr}}
+@media(max-width:600px){.switching-grid,.kr-fields{grid-template-columns:1fr 1fr}.panel.switching-parameters{padding:17px}}
+.kr-fields label,.kr-fields input{min-width:0}
+.kr-fields input{border-color:#a9bdc6;background:white}
+@media(max-width:760px){.key-result{flex-wrap:nowrap}.kr-tracking{flex-basis:auto}.objective-head label,.key-result>label{min-width:0;width:100%}}

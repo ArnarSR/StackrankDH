@@ -10,11 +10,11 @@ export const seedRoadmap=()=>({
  vision:{statement:'Kunder med bredbånd fra oss opplever at nettet hjemme bare virker.',note:'Illustrativ visjon. Endrer ingen økonomiske tall.'},
  objectives:[
   {id:'obj-retention',title:'Færre kunder forlater bredbåndet',note:'Illustrativt objective.',keyResults:[
-   {id:'kr-churn',title:'12-måneders churn i bredbånd ned fra 10 % til 9 %',note:'Illustrativt måltall.'},
-   {id:'kr-repeat',title:'Halvere andelen kunder med gjentatte feil',note:'Illustrativt måltall.'}]},
+   {id:'kr-churn',baseline:10,current:null,target:9,unit:'%',title:'12-måneders churn i bredbånd ned fra 10 % til 9 %',note:'Illustrativt måltall.'},
+   {id:'kr-repeat',baseline:100,current:null,target:50,unit:'indeks',title:'Halvere andelen kunder med gjentatte feil',note:'Illustrativt måltall.'}]},
   {id:'obj-experience',title:'Wi-Fi hjemme oppleves som pålitelig',note:'Illustrativt objective.',keyResults:[
-   {id:'kr-coverage',title:'Andel som rapporterer god dekning opp fra 62 % til 75 %',note:'Illustrativt måltall.'},
-   {id:'kr-contacts',title:'20 % færre henvendelser om Wi-Fi',note:'Illustrativt måltall uten tiltak ennå.'}]}],
+   {id:'kr-coverage',baseline:62,current:null,target:75,unit:'%',title:'Andel som rapporterer god dekning opp fra 62 % til 75 %',note:'Illustrativt måltall.'},
+   {id:'kr-contacts',baseline:100,current:null,target:80,unit:'indeks',title:'20 % færre henvendelser om Wi-Fi',note:'Illustrativt måltall uten tiltak ennå.'}]}],
  scenarios:[
   {id:'sc-platform',name:'Plattform først',note:'Bygger telemetri før diagnostikk, og tar adopsjon etterpå.',order:['telemetry','diagnostics','adoption']},
   {id:'sc-quick',name:'Rask gevinst først',note:'Hopper over plattformarbeidet og tar det som kan leveres raskt.',order:['adoption','wifi']}]});
@@ -134,4 +134,16 @@ export function validateRoadmapIssue(roadmap,items,scenarioIds=null){
   }
  }
  return null;
+}
+
+// Fremdrift er en egen vurdering, aldri en faktor i økonomien. Negative tall
+// viser tilbakegang; over 100 % viser at målet er overoppfylt.
+export function keyResultProgress(kr){
+ const fields=['baseline','current','target'];
+ if(fields.some(k=>kr[k]===null||kr[k]===undefined||kr[k]===''))return {state:'missing',percent:null};
+ if(fields.some(k=>!Number.isFinite(kr[k])))return {state:'invalid',percent:null};
+ if(kr.target===kr.baseline)return {state:'equal',percent:null};
+ const percent=(kr.current-kr.baseline)/(kr.target-kr.baseline)*100;
+ if(!Number.isFinite(percent))return {state:'invalid',percent:null};
+ return {state:percent>=100?'achieved':percent<0?'regressed':'tracking',percent};
 }

@@ -2,12 +2,12 @@ import {problem} from './validation.mjs';
 import {teamEffort} from './resources.mjs';
 export const taskStatuses={todo:'Ikke startet',doing:'Pågår',done:'Ferdig'};
 export const seedRoster=()=>({roles:[
- {id:'role-platform',name:'Plattform & nettverk',capacity:3,skills:['Telemetri','API','Datamodellering'],note:'Illustrativ kapasitet.'},
- {id:'role-wifi',name:'Wi-Fi & CPE',capacity:2,skills:['Firmware','Radiodekning','Feilsøking'],note:'Illustrativ kapasitet.'},
- {id:'role-app',name:'App & digitale flater',capacity:2.5,skills:['iOS','Android','Analyse'],note:'Illustrativ kapasitet.'},
- {id:'role-cx',name:'Kundeopplevelse',capacity:1.5,skills:['Tjenestedesign','Brukertest','Innholdsdesign'],note:'Illustrativ kapasitet.'},
- {id:'role-service',name:'Kundeservice',capacity:2,skills:['Arbeidsprosess','Opplæring','Pilotdrift'],note:'Illustrativ kapasitet.'},
- {id:'role-security',name:'Sikkerhet & personvern',capacity:1,skills:['Personvern','Risikovurdering','Leverandøravtaler'],note:'Illustrativ kapasitet.'}
+ {id:'role-platform',weeklyRate:30000,name:'Plattform & nettverk',capacity:3,skills:['Telemetri','API','Datamodellering'],note:'Illustrativ kapasitet.'},
+ {id:'role-wifi',weeklyRate:30000,name:'Wi-Fi & CPE',capacity:2,skills:['Firmware','Radiodekning','Feilsøking'],note:'Illustrativ kapasitet.'},
+ {id:'role-app',weeklyRate:30000,name:'App & digitale flater',capacity:2.5,skills:['iOS','Android','Analyse'],note:'Illustrativ kapasitet.'},
+ {id:'role-cx',weeklyRate:26000,name:'Kundeopplevelse',capacity:1.5,skills:['Tjenestedesign','Brukertest','Innholdsdesign'],note:'Illustrativ kapasitet.'},
+ {id:'role-service',weeklyRate:22000,name:'Kundeservice',capacity:2,skills:['Arbeidsprosess','Opplæring','Pilotdrift'],note:'Illustrativ kapasitet.'},
+ {id:'role-security',weeklyRate:32000,name:'Sikkerhet & personvern',capacity:1,skills:['Personvern','Risikovurdering','Leverandøravtaler'],note:'Illustrativ kapasitet.'}
 ]});
 export const roleById=(roster,id)=>(roster?.roles??[]).find(r=>r.id===id)??null;
 export const roleName=(roster,id)=>roleById(roster,id)?.name??'';
@@ -49,7 +49,7 @@ export function roleDemand(items,roster,key='expected',horizonWeeks=104){
    utilisation:available>0?demand/available*100:null,over:available>0&&demand>available};
  });
  let unassigned=0;
- for(const t of items)for(const team of t.teams??[])if(!team.roleId)unassigned+=teamEffort(team,key);
+ for(const t of items)for(const team of t.teams??[])if(!roleById(roster,team.roleId))unassigned+=teamEffort(team,key);
  return {roles,unassigned};
 }
 export function validateRoster(roster){return validateRosterIssue(roster)?.message??'';}
@@ -60,6 +60,7 @@ export function validateRosterIssue(roster){
   if(!role.name?.trim())return fail('gi rollen et navn.','name');
   if(ids.has(role.id))return fail('rollen har en duplisert ID.','name');ids.add(role.id);
   if(!Number.isFinite(role.capacity)||role.capacity<0)return fail('kapasitet må være et gyldig tall som er 0 eller større.','capacity');
+  if(!Number.isFinite(role.weeklyRate)||role.weeklyRate<0)return fail('ukesats må være et gyldig tall som er 0 eller større.','weeklyRate');
  }
  return null;
 }
@@ -76,4 +77,20 @@ export function validateTaskIssue(t,roster){
   if(task.roleId&&!roles.has(task.roleId))return fail('velg rollen på nytt; den forrige finnes ikke lenger.','roleId');
  }
  return null;
+}
+
+export function applyWeeklyRates(items,roster){
+ let updated=0;
+ for(const t of items??[])for(const team of t.teams??[]){
+  const standard=roleById(roster,team.roleId)?.weeklyRate;
+  if(!team.rateOverride&&Number.isFinite(standard)&&standard>=0&&team.rate!==standard){team.rate=standard;updated++}
+ }
+ return {updated};
+}
+export function rateDrift(items,roster){
+ return (items??[]).flatMap(t=>(t.teams??[]).flatMap(team=>{
+  const role=roleById(roster,team.roleId),standard=role?.weeklyRate;
+  if(!role)return [{id:t.id,teamId:team.id,name:t.name,team:team.name,value:team.rate,standard:null,diff:null}];
+  return team.rateOverride&&team.rate!==standard?[{id:t.id,teamId:team.id,name:t.name,team:team.name,value:team.rate,standard,diff:team.rate-standard}]:[];
+ }));
 }
