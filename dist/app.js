@@ -5,6 +5,7 @@ import {renderResourceDetails,renderResourceEditor,readResourceEditor,bindResour
 import {examples,evidence,strategicFit,calculate,sortMeasures,scenario} from './model.mjs';
 import {renderRoadmap,bindRoadmap,measureRoadmapFields,readMeasureRoadmapFields} from './roadmap-ui.mjs';
 import {renderRoster,bindRoster,renderTasks,currentRoster} from './roster-ui.mjs';
+import {renderProblems,bindProblems,bindBaselineToggle} from './problems-ui.mjs';
 const $=id=>document.getElementById(id);
 const number=(v,d=0)=>new Intl.NumberFormat('nb-NO',{maximumFractionDigits:d,minimumFractionDigits:d}).format(v);
 const money=v=>number(v)+' kr';
@@ -22,7 +23,7 @@ function render(){
  const cards=[['Forventet nettoverdi',compact(totals.net)+' kr','Sum av enkeltstående tiltak','highlight'],['Beholdte kunder',number(totals.retained),'Forventet · før korreksjon for overlapp',''],['Tiltakskostnad, første år',compact(totals.cost)+' kr','Tjenester, engangsposter og teaminnsats',''],['Tiltak med positivt lavscenario',items.filter(t=>scenario(t,'low').net>0).length+' av '+items.length,'Nettoverdi over null i lavscenarioet','']];
  $('metrics').innerHTML=cards.map(([label,value,note,cl])=>`<div class="metric ${cl}"><span class="metric-label">${label}</span><div class="metric-value">${value}</div><small>${note}</small></div>`).join('');$('count').textContent=items.length;
  $('rows').innerHTML=sorted.length?sorted.map((t,i)=>{const c=calculate(t),risk=riskSummary(t);return `<tr data-id="${esc(t.id)}" class="${selected===t.id?'selected':''}"><td><span class="rank">${String(i+1).padStart(2,'0')}</span></td><td><button class="name-button" data-select="${esc(t.id)}" aria-pressed="${selected===t.id}">${esc(t.name)}</button><div class="segment">${esc(t.segment)}</div></td><td>${badge(t)}</td><td>${fitBadge(t)}</td><td class="risk-cell"><button class="risk-jump ${risk.blocked?'risk-blocked':risk.severe?'risk-attention':''}" data-risk-jump="true">${risk.total?risk.active+(risk.active===1?' åpent forhold':' åpne forhold'):'Ikke registrert'}</button><small>${[risk.blocked?risk.blocked+' blokkert':null,risk.severe?risk.severe+(risk.severe===1?' risiko med høy konsekvens':' risikoer med høy konsekvens'):null].filter(Boolean).join(' · ')}</small></td><td>${number(c.retained,1)}</td><td class="money ${c.net<0?'negative':'positive'}" title="${money(c.net)}">${compact(c.net)} kr</td><td class="range-cell" title="${money(scenario(t,'low').net)} → ${money(scenario(t,'high').net)}">${compact(scenario(t,'low').net)} → ${compact(scenario(t,'high').net)}</td><td class="${c.roi<0?'negative':'positive'}">${c.roi===null?'—':number(c.roi)+' %'}</td><td aria-hidden="true">↗</td></tr>`}).join(''):'<tr><td colspan="10" class="empty">Ingen tiltak ennå. Legg til et tiltak for å starte beregningen.</td></tr>';
- $('analysis').hidden=!items.length;if(items.length)renderDetail();renderCapacity();renderRiskOverview();renderRoadmap();renderRoster();
+ $('analysis').hidden=!items.length;if(items.length)renderDetail();renderCapacity();renderRiskOverview();renderRoadmap();renderRoster();renderProblems();
 }
 function renderDetail(){const t=items.find(x=>x.id===selected)??items[0];selected=t.id;$('selected-title').textContent=t.name;
  $('evidence-links').innerHTML=(t.sources??[]).length?(t.sources??[]).map(s=>{const url=safeSourceUrl(s.url);return `<div class="evidence-link"><span>${esc(sourceTypes[s.type]??'Dokument')}</span>${url?`<a href="${esc(url)}" target="_blank" rel="noopener noreferrer">${esc(s.title)} ↗</a>`:`<strong>${esc(s.title)}</strong>`}<small>${esc(s.version||'Dato ikke oppgitt')} · ${esc(s.note||'Hva kilden underbygger er ikke oppgitt.')}</small></div>`}).join(''):'<p>Ingen dokumentasjon lagt til. Knytt presentasjoner, produktarbeid og analyser til antakelsene.</p>';
@@ -57,6 +58,8 @@ $('product-warning').addEventListener('click',e=>{const b=e.target.closest('[dat
 function renderProductWarnings(){const outside=items.filter(t=>t.customers>productCustomers);$('product-warning').innerHTML=outside.length?`<strong>${outside.length} tiltak har flere adresserbare kunder enn produktets kundebase. Rett anslagene før verdiene brukes.</strong>${outside.map(t=>`<button class="error-jump" data-fix-product="${esc(t.id)}">${esc(t.name)}: ${number(t.customers)} kunder – gå til tiltaket ↗</button>`).join('')}`:'';}
 bindRoadmap(()=>items,select);
 bindRoster(()=>items,()=>{if(items.length)renderTasks(items.find(x=>x.id===selected)??items[0])});
+bindProblems(()=>items,()=>renderRoadmap());
+bindBaselineToggle(()=>renderRoadmap());
 render();
 
 function renderCapacity(){

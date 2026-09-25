@@ -89,6 +89,14 @@ Oppgaver hører til en teamrad. **Oppgaver påvirker aldri økonomien** — team
 
 GitHub-integrasjonen bruker ingen innlogging. Projects v2 er GraphQL-only og krever `read:project`, og en statisk side har ingen trygg plass å oppbevare en token. I stedet bygger verktøyet forhåndsutfylte issue-URL-er som du selv sender inn på github.com, og lar deg lime inn en issue-lenke tilbake. Ingenting sendes automatisk, og verktøyet leser ikke status tilbake fra GitHub.
 
+## Nåkostnader
+
+Nåkostnadspanelet viser hva dagens problemer koster mens de får stå: berørte kunder × hendelser per år × kostnad per hendelse. Summen vises per år, over 24 måneder, og som påvirkbart bruttopotensial. Hvert problem merkes som målt, anslått eller antatt, og kan knyttes til tiltakene som adresserer det — så det blir synlig hvilke problemer ingen jobber med.
+
+**Dette er et eget regnskap.** Problemkostnad er ikke tiltaksverdi og summeres aldri inn i en plan eller et scenario. Påvirkbar andel er et anslag på hvor mye som i prinsippet kan fjernes, ikke en gevinst noen har lovet. Et tiltak som adresserer et problem har sin egen verdi i porteføljen; de to skal ikke legges sammen.
+
+«Gjør ingenting» kan vises som referanselinje på scenariokurven, men er **av som standard**: nåkostnaden er gjerne en størrelsesorden større enn planverdiene og klemmer plankurvene flate. Slås den på, varsler verktøyet om nettopp det.
+
 ## Parallellitet
 
 Hvert scenario har en WIP-grense: hvor mange tiltak som kan gå samtidig. Flere parallelle tiltak starter tidligere, men hvert enkelt tar lenger tid, fordi effektiv varighet = varighet ÷ (1 − tap). Standardtapet er Weinbergs tabell, som er en **erfaringsregel og ikke en måling**.

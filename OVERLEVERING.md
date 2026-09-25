@@ -42,7 +42,8 @@ Prioriteringslab sammenligner to utvalg og rekkefølger av arbeid med samme team
 10. Oppgaver er en nedbryting av en teamrad, aldri en egen kostnad. Teamraden er eneste kilde til økonomi, og differansen mellom oppgavesum og teamrad rapporteres i stedet for å avstemmes.
 11. Parallellitetstapet er en justerbar antakelse med Weinberg som default — en erfaringsregel, ikke en måling. Det treffer kalendertid, ikke kostnad. Se faq.html for kilder og uenigheten mellom dem.
 12. GitHub-integrasjonen er bevisst uten autentisering. Ikke innfør tokenhåndtering i en statisk side uten å ta beslutningen eksplisitt.
-13. Objectives, key results og visjon er en kvalitativ ramme. De endrer ingen økonomiske tall, og manglende kobling er en rapportert mangel, ikke en valideringsfeil.
+13. Nåkostnader er et eget regnskap. Problemkostnad er ikke tiltaksverdi, summeres aldri inn i en plan, og påvirkbar andel er bruttopotensial – ikke lovet gevinst.
+14. Objectives, key results og visjon er en kvalitativ ramme. De endrer ingen økonomiske tall, og manglende kobling er en rapportert mangel, ikke en valideringsfeil.
 
 ## Kjente begrensninger
 

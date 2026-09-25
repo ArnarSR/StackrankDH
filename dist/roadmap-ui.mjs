@@ -1,5 +1,7 @@
 import {scenario,horizons,evidence,strategicFit} from './model.mjs';
 import {seedRoadmap,keyResults,scenarioCurve,compareScenarios,unlocks,coverage,placementSignals,validateRoadmap,suggestedOrder,breakEvenMonth,throughput,switchingLoss,HORIZON_MONTHS} from './roadmap-model.mjs';
+import {doNothingCurve} from './problems.mjs';
+import {currentProblems,baselineVisible} from './problems-ui.mjs';
 const $=id=>document.getElementById(id);
 const number=(v,d=0)=>new Intl.NumberFormat('nb-NO',{maximumFractionDigits:d,minimumFractionDigits:d}).format(v);
 const compact=v=>Math.abs(v)>=1000000?number(v/1000000,2)+' mill.':Math.abs(v)>=1000?number(v/1000,0)+' tusen':number(v);
@@ -88,7 +90,10 @@ function renderScenarios(){
 
 function renderCurve(cmp,a,b){
  const series=[{result:cmp.a,scenario:a,color:'#2d7a64',dash:''},{result:cmp.b,scenario:b,color:'#5a6fa8',dash:' stroke-dasharray="6 3"'}];
- const points=[...cmp.a.curve,...cmp.b.curve].map(m=>m.cumulative);
+ // Eget regnskap, tegnet som referanse: hva problemene koster om de får stå.
+ const baseline=baselineVisible()?doNothingCurve(currentProblems()):null;
+ const baselineTotal=baseline?baseline.at(-1).cumulative:0;
+ const points=[...cmp.a.curve,...cmp.b.curve,...(baseline??[])].map(m=>m.cumulative);
  const min=Math.min(0,...points),max=Math.max(0,...points),spread=(max-min)||1;
  const x=m=>72+m/(HORIZON_MONTHS-1)*468,y=v=>212-(v-min)/spread*182;
  const path=curve=>curve.map((m,i)=>`${i?'L':'M'} ${x(m.month).toFixed(1)} ${y(m.cumulative).toFixed(1)}`).join(' ');
@@ -104,8 +109,12 @@ function renderCurve(cmp,a,b){
  const title=`Kumulativ nettoverdi over ${HORIZON_MONTHS} måneder. ${a.name}: ${money(cmp.a.net)}, ${nullText(series[0])}. ${b.name}: ${money(cmp.b.net)}, ${nullText(series[1])}.`;
  $('scenario-curve').innerHTML=`<div class="chart-wrap curve-wrap"><svg viewBox="0 0 560 248" role="img" aria-label="${esc(title)}"><text x="72" y="18">NOK, kumulativt</text>${grid}${ticks}${breakEven}
   <text x="306" y="246" text-anchor="middle">Måneder fra felles start</text>
+  ${baseline?`<path d="${path(baseline)}" fill="none" stroke="#a3554c" stroke-width="2" stroke-dasharray="2 5"/>`:''}
   ${series.map(({result,color,dash})=>`<path d="${path(result.curve)}" fill="none" stroke="${color}" stroke-width="2.5"${dash}/>`).join('')}${markers}</svg>
-  <div class="curve-legend">${series.map(({scenario,result},i)=>`<span><i class="scenario-key scenario-${i?'b':'a'}"></i>${esc(scenario.name)} · ${money(result.net)} · ${nullText(series[i])}</span>`).join('')}<span class="curve-delta">Forskjell: ${money(cmp.delta)}</span><span class="curve-hint">Ring = tiltak lander. Loddrett stiplet = planen går i null.</span></div></div>`;
+  <div class="curve-legend">${series.map(({scenario,result},i)=>`<span><i class="scenario-key scenario-${i?'b':'a'}"></i>${esc(scenario.name)} · ${money(result.net)} · ${nullText(series[i])}</span>`).join('')}<span class="curve-delta">Forskjell: ${money(cmp.delta)}</span>
+  ${baseline?`<span><i class="scenario-key scenario-none"></i>Gjør ingenting · ${money(baselineTotal)}</span>${Math.abs(baselineTotal)>Math.max(Math.abs(cmp.a.net),Math.abs(cmp.b.net))*4?'<span class="curve-warning">Nåkostnaden er mye større enn planverdiene, så plankurvene blir flate. Skru av for å lese dem.</span>':''}`:''}
+  <label class="baseline-toggle"><input type="checkbox" id="show-baseline"${baselineVisible()?' checked':''}>Vis hva dagens problemer koster</label>
+  <span class="curve-hint">Ring = tiltak lander. Loddrett stiplet = planen går i null.${baseline?' Den røde linjen er et <strong>eget regnskap</strong> over nåkostnader — den skal ikke legges til eller trekkes fra planene.':''}</span></div></div>`;
 }
 
 // Felter som legges inn i tiltaksdialogen.
