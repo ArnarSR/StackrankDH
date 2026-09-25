@@ -30,7 +30,7 @@ Kjør `npm start` fra denne mappen, eller `python3 -m http.server 4173 --bind 12
 - Kilderegister per tiltak: tittel, lenke, type, dato/versjon og notat. Én valgt kilde kan knyttes til churn-effekten og hver kostnads-/teamrad og risiko/avhengighet. Flere kilder kan registreres i registeret. Interne dokumenter kan refereres uten URL.
 - Norsk beløpsformat, responsive visninger og tastaturbetjening.
 
-Data holdes bare i minnet i den åpne fanen og nullstilles ved ny innlasting. Ingen kundedata sendes til en server. Google Fonts brukes for skrifter, med lokale sans-serif-fallbacks. Dette er en prototype uten database, innlogging eller delt lagring i selve appen. Sites kan beskytte tilgang til den publiserte siden.
+Data lagres lokalt i din egen nettleser og kan eksporteres til fil — se [Lagring](#lagring). Ingen kundedata sendes til en server. Google Fonts brukes for skrifter, med lokale sans-serif-fallbacks. Dette er fortsatt en prototype uten database, innlogging eller delt lagring: data ligger hos én bruker, i én nettleser, på én maskin.
 
 ## Modell
 
@@ -165,4 +165,4 @@ Tiltaksporteføljen viser alle dokumentreferanser ved siden av evidensen. Kildet
 
 Valideringsfeil viser konkrete felt og verdier, markerer relevante inndata og flytter fokus til første feil ved lagring. Feil fjernes under retting uten å flytte fokus. `validation.mjs` gir strukturerte feltreferanser og `form-validation.mjs` kobler dem til skjemaet.
 
-Siden henter ikke automatisk nye publiserte versjoner. En ny innlasting kreves. Inndata finnes bare i minnet i den åpne fanen og går tapt ved ny innlasting. Navigasjonslenker mellom portefølje og lab åpnes derfor i ny fane fra hovedarbeidsflaten.
+Siden henter ikke automatisk nye publiserte versjoner. En ny innlasting kreves. Inndata lagres lokalt i nettleseren, men portefølje og lab lagres hver for seg og er ikke synkronisert.
