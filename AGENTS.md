@@ -12,7 +12,7 @@ Hele grensesnittet og all dokumentasjon er på **norsk**. Beløp i **NOK**, form
 
 ```
 npm start    # Python 3 sin HTTP-server på http://127.0.0.1:4173, serverer dist/
-npm test     # node --test, 101 tester, ingen avhengigheter
+npm test     # node --test, 124 tester, ingen avhengigheter
 ```
 
 **Ingen npm-pakker, ingen byggefase, ingen rammeverk.** Ren HTML/CSS/ES-moduler servert direkte fra `dist/`. Dette er et bevisst premiss — ikke innfør en bundler, TypeScript eller et rammeverk uten å spørre først.
