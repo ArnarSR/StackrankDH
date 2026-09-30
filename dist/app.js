@@ -7,7 +7,9 @@ import {renderRoadmap,renderStrategy,renderBoard,renderScenarios,bindRoadmap,mea
 import {renderRoster,bindRoster,renderTasks,currentRoster} from './roster-ui.mjs';
 import {renderProblems,bindProblems,bindBaselineToggle} from './problems-ui.mjs';
 import {renderParameters,bindParameters,measureValueField,standardCustomerValue,syncValueField} from './parameters-ui.mjs';
-import {STORAGE_KEY,safeRead,safeWrite,safeClear,parseEnvelope,makeEnvelope,exportName} from './storage.mjs';
+import {STORAGE_KEY,makeEnvelope,exportName} from './storage.mjs';
+import {createPersistence,importEnvelope} from './persistence.mjs';
+import {validateDocument} from './workspace-schema.mjs';
 import {views,parseRoute,routeHash,navigate,bindRouter,DEFAULT_VIEW} from './router.mjs';
 import {renderSegments,renderMeasureSegments,bindSegments,syncSegments,snapshotSegments,restoreSegments,currentSegments,setMeasureContext} from './segments-ui.mjs';
 import {snapshotRoadmap,restoreRoadmap} from './roadmap-ui.mjs';
@@ -119,68 +121,99 @@ function applyWorkspace(w){
  const base=currentParameters()?.product?.customers;
  if(Number.isInteger(base)&&base>=0){productCustomers=base;$('product-customers').value=base}
 }
-let saveTimer=null,storageNote='',storageBlocked=false;
+const persistence=createPersistence(STORAGE_KEY);
+let saveTimer=null,storageNote='',storageBlocked=false,lastSaved='';
 function setStorageState(state,detail){$('storage-state').textContent=state;$('storage-detail').textContent=detail;}
-function saveNow(){
- if(storageBlocked)return;
- const result=safeWrite(STORAGE_KEY,snapshot());
- if(result.ok)setStorageState('Lagret i denne nettleseren',storageNote||'Endringene dine er her neste gang du åpner siden på denne maskinen.');
- else $('storage-error').textContent='Kunne ikke lagre: '+result.error+' Eksporter til fil for å ta vare på arbeidet.';
-}
-function saveSoon(){clearTimeout(saveTimer);saveTimer=setTimeout(saveNow,400);}
-function loadStored(){
- const result=safeRead(STORAGE_KEY);
- if(!result.ok){
-  storageBlocked=true;
-  setStorageState('Autolagring er satt på pause','Tidligere data beholdes. Last ned sikkerhetskopien før import eller nullstilling.');
-  $('storage-error').textContent='Tidligere lagret data kunne ikke leses: '+result.error+' Eksempeldataene vises. ';
-  const button=document.createElement('button');button.className='secondary';button.textContent='Last ned tidligere data';
-  button.addEventListener('click',()=>{
-   try{const raw=localStorage.getItem(STORAGE_KEY);if(!raw)return;
-    const url=URL.createObjectURL(new Blob([raw],{type:'application/json'}));
-    const a=document.createElement('a');a.href=url;a.download='churn-studio-tidligere-data.json';a.click();URL.revokeObjectURL(url);
-   }catch{$('storage-error').append(' Kunne ikke lese sikkerhetskopien.')}
-  });$('storage-error').append(button);return false;
+async function saveNow(force=false){
+ if(storageBlocked)return false;
+ const data=snapshot(),text=JSON.stringify(data);if(!force&&text===lastSaved)return true;
+ setStorageState('Lagrer …','Vent med å lukke siden til lagringen er bekreftet.');
+ const result=await persistence.save(data);
+ if(result.ok){
+  lastSaved=text;$('storage-error').textContent='';
+  setStorageState(persistence.mode==='sql'?'Lagret i PostgreSQL':'Lagret i denne nettleseren',
+   persistence.mode==='sql'?'Arbeidsflate '+persistence.workspaceId+' · revisjon '+result.revision:storageNote||'Endringene er lagret på denne maskinen.');
+ }else{
+  $('storage-error').textContent='Ikke lagret: '+result.error;
+  setStorageState('Utkastet er ikke lagret','Eksporter utkastet før du laster inn serverversjonen.');return false;
  }
- if(!result.workspace)return false;
- applyWorkspace(result.workspace);
- storageNote='Sist lagret '+new Date(result.savedAt??Date.now()).toLocaleString('nb-NO')+'.';
  return true;
 }
-function downloadWorkspace(){
- const blob=new Blob([JSON.stringify(makeEnvelope(snapshot()),null,1)],{type:'application/json'});
- const url=URL.createObjectURL(blob);
- const a=document.createElement('a');a.href=url;a.download=exportName();a.click();
- URL.revokeObjectURL(url);
- setStorageState('Eksportert til fil',exportName()+' er lastet ned.');
+function saveSoon(){
+ clearTimeout(saveTimer);
+ queueMicrotask(()=>{if(JSON.stringify(snapshot())!==lastSaved)persistence.backup(snapshot())});
+ saveTimer=setTimeout(()=>saveNow(),400);
 }
-$('export-workspace').addEventListener('click',downloadWorkspace);
-$('import-workspace').addEventListener('change',async e=>{
- const file=e.target.files?.[0];if(!file)return;
- e.target.value='';
- $('storage-error').textContent='';
- const result=parseEnvelope(await file.text());
- if(!result.ok){$('storage-error').textContent='Import avvist: '+result.error+' Ingenting er endret.';return}
- applyWorkspace(result.workspace);
- storageBlocked=false;
- storageNote='Importert fra '+file.name+'.';
- render();saveNow();
- $('live').textContent='Arbeidsflaten er importert.';
+function downloadText(text,name){
+ const url=URL.createObjectURL(new Blob([text],{type:'application/json'}));
+ const a=document.createElement('a');a.href=url;a.download=name;a.click();URL.revokeObjectURL(url);
+}
+async function loadStored(){
+ const result=await persistence.load();
+ $('load-browser-data').hidden=persistence.mode!=='sql';
+ $('download-recovery').hidden=!persistence.recovery();
+ if(!result.ok){
+  storageBlocked=true;
+  setStorageState('Autolagring er satt på pause','Eksporter utkastet. Innlasting må lykkes før SQL-data kan endres.');
+  $('storage-error').textContent=result.error;
+  if(persistence.mode==='local'){
+   const button=document.createElement('button');button.className='secondary';button.textContent='Last ned tidligere data';
+   button.addEventListener('click',()=>{try{const raw=localStorage.getItem(STORAGE_KEY);if(raw)downloadText(raw,'churn-studio-tidligere-data.json')}catch{}});
+   $('storage-error').append(button);
+  }
+  return;
+ }
+ if(result.workspace){
+  const candidate={...snapshot(),...result.workspace},error=validateDocument('portfolio',2,candidate);
+  if(error){storageBlocked=true;setStorageState('Innlasting stoppet',error);return}
+  applyWorkspace(candidate);
+ }
+ if(persistence.mode==='sql'){
+  setStorageState(result.workspace?'Hentet fra PostgreSQL':'Ny SQL-arbeidsflate','Arbeidsflate '+persistence.workspaceId+'. Eksempeldata lagres først når du endrer dem.');
+  if(result.recovery)$('storage-error').textContent='Det finnes et lokalt nødutkast fra en tidligere økt. Last det ned før videre arbeid.';
+ }else setStorageState('Lokal nettleserlagring','Statisk utgave. Data deles ikke med SQL-serveren.');
+}
+$('export-workspace').addEventListener('click',()=>downloadText(JSON.stringify(makeEnvelope(snapshot()),null,1),exportName()));
+$('download-recovery').addEventListener('click',()=>{
+ const raw=persistence.recovery();if(raw)downloadText(raw,'churn-studio-nodutkast.json');
 });
-$('reset-workspace').addEventListener('click',e=>{
+$('reload-workspace').addEventListener('click',e=>{
+ if(e.target.dataset.armed!=='true'){e.target.dataset.armed='true';e.target.textContent='Bekreft ny innlasting';return}
+ clearTimeout(saveTimer);storageBlocked=true;location.reload();
+});
+async function importWorkspace(result,label){
+ if(!result.ok){$('storage-error').textContent='Import avvist: '+result.error;return}
+ const candidate={...snapshot(),...result.workspace},error=validateDocument('portfolio',2,candidate);
+ if(error){$('storage-error').textContent='Import avvist: '+error;return}
+ applyWorkspace(candidate);storageBlocked=false;
+ storageNote=label+(result.migrated?' Oppgradert fra versjon 1 med ufordelt BU.':'');
+ render();const saved=await saveNow(true);
+ $('live').textContent=saved?'Arbeidsflaten er importert og lagret.':'Importert i minnet, men ikke lagret. Eksporter utkastet.';
+}
+$('import-workspace').addEventListener('change',async e=>{
+ const file=e.target.files?.[0];if(!file)return;e.target.value='';
+ try{await importWorkspace(importEnvelope(await file.text()),'Importert fra '+file.name+'.')}
+ catch{$('storage-error').textContent='Filen kunne ikke leses. Ingenting er importert.'}
+});
+$('load-browser-data').addEventListener('click',async e=>{
+ if(e.target.dataset.armed!=='true'){e.target.dataset.armed='true';e.target.textContent='Bekreft overføring til SQL';return}
+ e.target.dataset.armed='';e.target.textContent='Flytt nettleserdata til SQL';
+ await importWorkspace(persistence.legacy(),'Hentet fra tidligere nettleserdata. Originalen er beholdt.');
+});
+$('reset-workspace').addEventListener('click',async e=>{
  if(e.target.dataset.armed!=='true'){e.target.dataset.armed='true';e.target.textContent='Bekreft nullstilling';
-  setStorageState('Nullstiller','Alt du har skrevet inn slettes og eksempeldataene kommer tilbake. Klikk igjen for å bekrefte.');return}
- e.target.dataset.armed='';e.target.textContent='Nullstill';
+  setStorageState('Nullstiller','Klikk igjen. I SQL beholdes tidligere revisjoner.');return}
  clearTimeout(saveTimer);storageBlocked=true;
- const cleared=safeClear(STORAGE_KEY);if(!cleared.ok){$('storage-error').textContent=cleared.error;return}
- items=structuredClone(examples);selected=items[0].id;
- storageNote='Nullstilt til eksempeldata.';
+ const cleared=await persistence.clear();
+ if(!cleared.ok){$('storage-error').textContent=cleared.error;return}
  location.reload();
 });
 document.addEventListener('input',saveSoon,true);
 document.addEventListener('change',saveSoon,true);
 document.addEventListener('click',saveSoon,true);
-loadStored();
+document.body.inert=true;
+setStorageState('Henter arbeidsflaten …','Lagringsmodus kontrolleres.');
+await loadStored();
 bindBusinessUnits(()=>items,currentRoster,saveSoon);
 bindRoadmap(()=>items,select);
 bindRoster(()=>items,()=>{if(items.length)renderTasks(items.find(x=>x.id===selected)??items[0])});
@@ -191,7 +224,8 @@ bindParameters(()=>items,()=>render());
 buildNav();
 bindRouter(onNavigate);
 render();
-saveNow();
+lastSaved=JSON.stringify(snapshot());
+document.body.inert=false;
 
 function renderCapacity(){
  const groups=resourcePortfolio(items);$('capacity-count').textContent=groups.length+' team';

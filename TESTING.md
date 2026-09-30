@@ -1,5 +1,20 @@
 # Verifisering av Business Units
 
+## SQL-leveranse 30.09.2026
+
+Branch `feat/postgres-storage` bygger på BU-commit `0b6a26e`.
+
+- 144 enhets-/modell-/adaptertester består.
+- 12 PostgreSQL/HTTP-integrasjonstester består mot `stackrankdh_test`. De dekker ekte database, klientadapter → HTTP → SQL → ny klient, samtidige skrivinger, historikkrollback, dokumentisolasjon, reset, dokumentstørrelse og frakoblet database.
+- Migreringen er kjørt i `stackrankdh_dev`, og serveren startet på 127.0.0.1:4176 med `stackrankdh_app`.
+- Approllen er kontrollert: skriving til dokumenter tillates, DELETE, historikk-UPDATE og CREATE på skjema tillates ikke.
+- Node-serverens statiske filer og helsesjekk er verifisert gjennom HTTP-testene. Serveren sender `Cache-Control: no-store`.
+- Nettleseråpning ble igjen blokkert fordi administratorkontrollen ikke kunne verifiseres. Ingen visuell desktop-/mobil-/konsolltest er derfor markert som bestått.
+
+Før publisering: gjennomfør BU-listen nedenfor i SQL-modus, flytt en eksportfil fra gammel adresse, kontroller at begge appflatene overlever innlasting på nytt, åpne to faner og utløse konflikt, og stopp serveren for å kontrollere «ikke lagret» og nedlasting av nødutkast. Import av porteføljeversjon 1 skal nå **oppgraderes eksplisitt**, ikke avvises slik den tidligere BU-utgaven gjorde. Ukjente versjoner skal fortsatt avvises.
+
+## Tidligere BU-verifisering
+
 Utgangspunkt: `47501a7`, branch `feat/business-units`. Kontrollert 30.09.2026.
 
 ## Kjørt

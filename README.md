@@ -1,10 +1,12 @@
 # Churn Studio
 
-En fungerende norsk MVP for å sammenligne churn-tiltak i bredbånd og Wi-Fi. Ingen rammeverk eller pakkeinstallasjon er nødvendig.
+En norsk MVP for å sammenligne churn-tiltak i bredbånd og Wi-Fi. Frontenden er ren HTML/CSS/JavaScript. Serverutgaven lagrer i PostgreSQL via et lite Node-API.
 
 ## Start lokalt
 
-Kjør `npm start` fra denne mappen, eller `python3 -m http.server 4173 --bind 127.0.0.1 --directory dist`. Åpne http://127.0.0.1:4173. Bruk HTTP-serveren; JavaScript-moduler fungerer normalt ikke ved å dobbeltklikke HTML-filen.
+For SQL-utgaven: installer Node 22+ og PostgreSQL 16+, kjør `npm ci`, sett `.env` og kjør `npm run db:migrate` etter oppsettet i [SQL-STORAGE.md](SQL-STORAGE.md). Start med `npm start` og åpne adressen som skrives i terminalen. Serveren binder kun til 127.0.0.1.
+
+For den statiske utgaven med lokal nettleserlagring: `npm run start:local`, deretter http://127.0.0.1:4173. Ingen npm-pakker trengs for denne utgaven. GitHub Pages fortsetter å kjøre den statiske varianten; SQL krever en server.
 
 ## Funksjoner
 
@@ -30,7 +32,7 @@ Kjør `npm start` fra denne mappen, eller `python3 -m http.server 4173 --bind 12
 - Kilderegister per tiltak: tittel, lenke, type, dato/versjon og notat. Én valgt kilde kan knyttes til churn-effekten og hver kostnads-/teamrad og risiko/avhengighet. Flere kilder kan registreres i registeret. Interne dokumenter kan refereres uten URL.
 - Norsk beløpsformat, responsive visninger og tastaturbetjening.
 
-Data lagres lokalt i din egen nettleser og kan eksporteres til fil — se [Lagring](#lagring). Ingen kundedata sendes til en server. Google Fonts brukes for skrifter, med lokale sans-serif-fallbacks. Dette er fortsatt en prototype uten database, innlogging eller delt lagring: data ligger hos én bruker, i én nettleser, på én maskin.
+SQL-utgaven lagrer portefølje og lab i PostgreSQL. Den statiske utgaven lagrer lokalt i nettleseren. Begge støtter eksport/import; lagringsmodusen vises i appen. SQL-serveren er foreløpig lokal på din maskin, uten SSO eller ekstern deling. Google Fonts brukes for skrifter, med lokale sans-serif-fallbacks.
 
 ## Modell
 
@@ -55,7 +57,7 @@ Forventet er et brukerdefinert hovedscenario, ikke et sannsynlighetsvektet forve
 
 Statisk publisering bruker innholdet i `dist/`. Ingen byggefase kreves.
 
-Kildelenker åpnes i ny fane. Kilder lagres bare i denne økten sammen med tiltakene. Ingen referanser eller eksempelstudier er fabrikkert; eksemplene har ingen registrerte kilder. Registrering av en kilde endrer ikke automatisk evidensnivå eller økonomiske tall.
+Kildelenker åpnes i ny fane. Kildereferanser lagres sammen med tiltakene i valgt lagringsmodus. Ingen referanser eller eksempelstudier er fabrikkert; eksemplene har ingen registrerte kilder. Registrering av en kilde endrer ikke automatisk evidensnivå eller økonomiske tall.
 
 Risiko og avhengigheter endrer ikke økonomiske resultater automatisk. Åpne risikoer med høy konsekvens flagges uavhengig av sannsynlighet; dette er ingen beregnet risikoscore. Juster churn-, rekkevidde-, kostnads- og tidsanslag manuelt når risikovurderingen gir grunnlag for det. Eksempelrisikoene er illustrative. Manglende registrering betyr ikke at et tiltak er risikofritt.
 
@@ -103,19 +105,17 @@ GitHub-integrasjonen bruker ingen innlogging. Projects v2 er GraphQL-only og kre
 
 ## Lagring
 
-Alt du skriver inn lagres automatisk i **din egen nettleser** (`localStorage`), og er der neste gang du åpner siden på samme maskin i samme nettleser. Porteføljesiden og prioriteringslaben har hver sin nøkkel, fordi de har hver sin datamodell.
+Serverutgaven lagrer automatisk i PostgreSQL etter endringer. Portefølje (modellversjon 2) og lab (modellversjon 1) er separate dokumenter. Hver lagring får et revisjonsnummer og en historikkpost. Appen lagrer en hel arbeidsflate atomisk; beregningene forblir i de eksisterende modellmodulene.
 
-- **Eksporter til fil** laster ned hele arbeidsflaten som JSON, til sikkerhetskopi eller for å flytte mellom maskiner.
-- **Importer fra fil** leser en slik fil tilbake. Filen valideres først: feil app, feil versjon eller feil struktur avvises, og ingenting endres.
-- **Nullstill** sletter lagret data og henter eksempeldataene tilbake. Krever bekreftelse i to steg.
+- **Eksporter/importer** flytter arbeidsflaten som JSON. Laben har egne knapper. Eksplisitt import av porteføljeversjon 1 legger til ufordelt BU; ukjente versjoner avvises.
+- **Flytt nettleserdata til SQL** krever to klikk og erstatter SQL-dokumentet med tidligere data fra samme nettleseradresse. Originalen beholdes. Ved bytte av port/domene: eksporter fra den gamle adressen og importer filen på den nye.
+- **Nullstill** krever to klikk. I SQL opprettes en nullstillingsrevisjon; tidligere data finnes fortsatt i historikken. I lokalmodus slettes nettleserlagringen.
+- **Konflikt:** hvis en annen fane har lagret, stoppes videre skriving. Eksporter utkastet og last inn serverversjonen før du fortsetter. Endringer flettes ikke automatisk.
+- **Serverfeil:** appen viser «ikke lagret». Lokalt nødutkast forsøkes bevart, og kan lastes ned ved neste innlasting. Hvis nettleserlagring også er utilgjengelig, eksporter fra den åpne siden.
 
-Lagret data har et versjonsnummer. Endres datamodellen senere, avvises gammel data med en forklaring i stedet for å lastes halvveis inn — en halvt gjenopprettet arbeidsflate er farligere enn eksempeldata.
+SQL-data deles mellom faner og nettlesere på samme lokale server/arbeidsflate. Før ekstern deling kreves SSO, autorisasjon og HTTPS. Den statiske utgaven på GitHub Pages beholder lokal nettleserlagring; den bytter aldri til SQL av seg selv.
 
-BU-utgaven bruker versjon 2 for porteføljen. Versjon 1 avvises; autolagring settes på pause og «Last ned tidligere data» bevarer originalen som fil. Ingen automatisk konvertering er innført. Eksporter gamle data før oppgradering; ikke nullstill før sikkerhetskopien er sikret. Prioriteringslaben beholder lagringsversjon 1 og påvirkes ikke av BU-endringen.
-
-Nettleserlagring kan feile: privat modus, full kvote eller blokkerte nettsteddata. Appen fanger det, sier fra i statuslinjen og fortsetter å virke i minnet. Får du den meldingen, eksporter til fil.
-
-**Dette er ikke delt lagring.** Data ligger bare hos deg, i én nettleser på én maskin. Tømmer du nettleserdata, er det borte. Skal flere jobbe i samme tall, må dere enten dele en eksportfil eller bygge ekte skylagring med backend.
+Se [SQL-PLAN.md](SQL-PLAN.md) for datamodell og [SQL-STORAGE.md](SQL-STORAGE.md) for oppsett, API, historikk og backup.
 
 ## Sidevisninger
 
@@ -207,4 +207,4 @@ Tiltaksporteføljen viser alle dokumentreferanser ved siden av evidensen. Kildet
 
 Valideringsfeil viser konkrete felt og verdier, markerer relevante inndata og flytter fokus til første feil ved lagring. Feil fjernes under retting uten å flytte fokus. `validation.mjs` gir strukturerte feltreferanser og `form-validation.mjs` kobler dem til skjemaet.
 
-Siden henter ikke automatisk nye publiserte versjoner. En ny innlasting kreves. Inndata lagres lokalt i nettleseren, men portefølje og lab lagres hver for seg og er ikke synkronisert.
+Siden henter ikke automatisk nye publiserte versjoner. En ny innlasting kreves. Inndata lagres i valgt lokal/SQL-modus. Portefølje og lab lagres hver for seg og er ikke synkronisert.

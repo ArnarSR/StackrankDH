@@ -1,0 +1,10 @@
+import {configFromEnv} from './config.mjs';
+import {createPool} from './database.mjs';
+import {createRepository} from './repository.mjs';
+import {createAppServer} from './http.mjs';
+const config=configFromEnv(),pool=createPool(config.databaseUrl);
+await pool.query('SELECT 1 FROM workspace_documents LIMIT 1');
+const server=createAppServer({repository:createRepository(pool,config.workspaceId),pool,workspaceId:config.workspaceId});
+server.listen(config.port,'127.0.0.1',()=>console.log(`StackrankDH: http://127.0.0.1:${config.port} · PostgreSQL · ${config.workspaceId}`));
+server.on('error',async e=>{console.error(e.code);await pool.end();process.exitCode=1});
+for(const signal of ['SIGINT','SIGTERM'])process.on(signal,()=>{server.close(async()=>{await pool.end();process.exit(0)})});

@@ -2,7 +2,17 @@
 
 Status 24. september 2026. Dette dokumentet beskriver levert løsning og kjente begrensninger; foreslått videre arbeid er ikke en bestilling på automatisk omskriving.
 
-## Tillegg 30. september 2026 — Business Units
+## Tillegg 30. september 2026 — SQL-lagring
+
+Arnar bestilte eksplisitt planlegging og implementering av SQL-lagring. Den tidligere beslutningen om bare lokal lagring er dermed erstattet for serverutgaven. Se `SQL-PLAN.md` for planen og `SQL-STORAGE.md` for drift.
+
+Implementert: Node HTTP-server med `pg`, migrert PostgreSQL-skjema, avgrenset approlle, JSONB-dokumenter for portefølje og lab, atomisk revisjonshistorikk, optimistisk konfliktkontroll, asynkron klientadapter og eksplisitt import av v1-porteføljedata. Nullstilling bevarer SQL-historikken. Lokal statisk modus er beholdt. Ingen modellregler eller GitHub-tokenhåndtering er endret.
+
+Utviklingsdatabasen er `stackrankdh_dev`, testdatabasen `stackrankdh_test`. Serveren binder bare til loopback; ekstern deling, Telenor SSO og autorisasjon er ikke levert. Dev og demo må bruke forskjellige databaser ved utrulling.
+
+Verifisert: 144 enhet-/modell-/adaptertester og 12 PostgreSQL/HTTP-integrasjonstester. Lagring/gjenlesing, samtidighet, historikkrollback, reset, isolasjon, eldre import og databasefeil er dekket. Visuell nettlesertesting er fortsatt blokkert av administratorkontrollen. Se `TESTING.md`.
+
+## Tidligere BU-leveranse (før SQL-endringen)
 
 Implementert fra commit `47501a7` på `feat/business-units`. Ny visning `#/business-units`: redigerbart BU-register, én `businessUnitId` per tiltak, BU per rolle og bidragsmatrise i forventede ressursuker. Hele nettoverdien tilhører tiltakets eier; deltakere utledes bare av teamradenes roller. Ukjente/slettede koblinger vises som ufordelt. Sletting krever to klikk, fjerner koblingene og bevarer økonomien. Ingen illustrative organisasjonstilknytninger er lagt inn.
 
@@ -22,7 +32,7 @@ Et norsk beslutningsverktøy for produktledere i telekom, særlig bredbånd og W
 
 Prosjektet bruker vanlig HTML, CSS og JavaScript-moduler. Ingen rammeverk, installasjon av npm-pakker eller byggefase trengs.
 
-- `npm start` starter Python 3 sin HTTP-server på http://127.0.0.1:4173.
+- `npm start` starter Node/SQL-serveren med `.env`. `npm run start:local` starter Python-serveren på http://127.0.0.1:4173.
 - Alternativt: `python3 -m http.server 4173 --bind 127.0.0.1 --directory dist`.
 - `npm test` kjører modelltester med Node.js 18 eller nyere.
 - Åpne `/` for porteføljen og `/prioritering.html` for prioriteringslaben.
@@ -63,7 +73,7 @@ Prioriteringslab sammenligner to utvalg og rekkefølger av arbeid med samme team
 
 ## Kjente begrensninger
 
-- Lagring skjer lokalt i nettleseren (`localStorage`) med eksport/import av JSON. Det er ikke delt lagring: data ligger hos én bruker, i én nettleser, på én maskin, og forsvinner om nettleserdata tømmes.
+- SQL-utgaven deler arbeidsflaten mellom faner/nettlesere via lokal server. Statisk utgave bruker fortsatt `localStorage`. SQL-historikk erstatter ikke driftsbackup; se `SQL-STORAGE.md`.
 - Lagret data er versjonert. Endrer du datamodellen, øk `STORAGE_VERSION` i `dist/storage.mjs`; gammel data avvises da med forklaring i stedet for å lastes halvveis inn.
 - Ingen automatisk oppdatering av en åpen side når en ny versjon publiseres.
 - Portefølje og lab bruker separate data, også separate kundebaseinnstillinger. De er ikke synkronisert.
@@ -73,7 +83,7 @@ Prioriteringslab sammenligner to utvalg og rekkefølger av arbeid med samme team
 - Ukesats settes fortsatt per teamrad (9 steder i eksempeldataene), og er ikke samlet i parametrene.
 - Tapstabellen for kontekstbytte er dokumentert som justerbar og støttes av modellen, men er ennå ikke eksponert i grensesnittet. Weinberg-tallene er i praksis låst til defaultverdiene.
 - Horisonten på 24 måneder er hardkodet i `dist/timeline.mjs`.
-- Ingen database eller delt redigering i appen. Den nåværende vertstjenesten kan styre tilgang til selve siden.
+- PostgreSQL-lagring finnes lokalt. Ingen sanntidsfletting av samtidige endringer; konflikter må håndteres via eksport og ny innlasting. Ekstern SQL-hosting og SSO gjenstår.
 
 ## Filer
 
@@ -89,7 +99,7 @@ Den portable ZIP-pakken inkluderer ikke Git-historikk, autentisering eller Sites
 
 ## Beslutninger som er tatt
 
-- **Lagring: lokalt, ikke i sky.** Besluttet 25.09.2026. Data lagres i brukerens egen nettleser, med eksport/import av JSON for sikkerhetskopi og flytting. Ekte skylagring med konto og delt database ble vurdert og valgt bort. Tre grunner ble avgjørende: GitHub Pages kan ikke kjøre backend, dataene er forretningssensitive og ville forlatt maskinen, og sikkerheten ville hvilt på tilgangsregler i en ekstern tjeneste der API-nøkkelen ligger åpent i nettleseren. **Ikke innfør innlogging eller en ekstern database uten at denne beslutningen tas om igjen eksplisitt.**
+- **Lagring: PostgreSQL via server-API, besluttet 30.09.2026.** Arnar bestilte endringen eksplisitt. Databaselegitimasjon forblir på serveren, JSONB bevarer modellene, og SQL-versjonen kjører foreløpig bare lokalt. Statisk hosting beholder nettleserlagring. Beslutningen fra 25.09 om ingen database er erstattet; SSO og ekstern utrulling er fortsatt egne oppgaver.
 - **Tidsmodell: laben er konvergert mot veikartet.** Besluttet 25.09.2026. Felles motor i `dist/timeline.mjs`. Porteføljens 12-månedersmodell står bevisst utenfor.
 - **GitHub-integrasjon: uten autentisering.** Forhåndsutfylte issue-URL-er, ikke tokenhåndtering.
 - **Kundeverdi: sammensatt, kappet ved 12 måneder.** Hindrer at full CLV smugles inn i strid med modellskille 2.

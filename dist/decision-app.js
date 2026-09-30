@@ -1,22 +1,26 @@
 import {parseDocumentLinks} from './document-links.mjs';
-import {LAB_STORAGE_KEY,safeRead,safeWrite,safeClear} from './storage.mjs';
+import {LAB_STORAGE_KEY,LAB_STORAGE_VERSION,makeEnvelope} from './storage.mjs';
+import {createPersistence,importEnvelope} from './persistence.mjs';
+import {validateDocument} from './workspace-schema.mjs';
 import {cases,evidenceNames,initialOptions,initialPain,painValue,planValue,delayValue,isValidated} from './decision-model.mjs';
 const $=s=>document.querySelector(s),esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const nf=new Intl.NumberFormat('nb-NO',{maximumFractionDigits:1}),num=x=>nf.format(x),money=x=>`${num(x/1000000)} mill. kr`,full=x=>`${new Intl.NumberFormat('nb-NO',{maximumFractionDigits:0}).format(x)} kr`;
 let options=structuredClone(initialOptions),pain=structuredClone(initialPain),plans={A:['feature','discovery'],B:['diagnostics','wifi','discovery']},settings={fte:2,weeks:13,weeklyRate:30000,wip:1,productCustomers:250000},delay=13;
 // Autolagring for laben. Egen nøkkel: laben har sin egen datamodell.
 function labSnapshot(){return {options,pain,plans,settings,delay};}
-let labTimer=null;
-function labSave(){
- const r=safeWrite(LAB_STORAGE_KEY,labSnapshot());
- const el=$('#lab-storage');if(!el)return;
- el.textContent=r.ok?'Lagres automatisk i denne nettleseren':'Kunne ikke lagre: '+r.error;
+const persistence=createPersistence(LAB_STORAGE_KEY);
+let labTimer=null,labBlocked=false,lastLabSaved='';
+async function labSave(force=false){
+ if(labBlocked)return false;
+ const w=labSnapshot(),text=JSON.stringify(w);if(!force&&text===lastLabSaved)return true;
+ $('#lab-storage').textContent='Lagrer …';
+ const r=await persistence.save(w);
+ if(r.ok){lastLabSaved=text;$('#lab-storage').textContent=persistence.mode==='sql'?'Lagret i PostgreSQL · revisjon '+r.revision:'Lagret i denne nettleseren'}
+ else $('#lab-storage').textContent='Ikke lagret: '+r.error;
+ return r.ok;
 }
-function labSaveSoon(){clearTimeout(labTimer);labTimer=setTimeout(labSave,400);}
-(function labLoad(){
- const r=safeRead(LAB_STORAGE_KEY);
- if(!r.ok||!r.workspace)return;
- const w=r.workspace;
+function labSaveSoon(){clearTimeout(labTimer);queueMicrotask(()=>{if(JSON.stringify(labSnapshot())!==lastLabSaved)persistence.backup(labSnapshot())});labTimer=setTimeout(()=>labSave(),400)}
+function restoreLab(w){
  if(Array.isArray(w.options))options=w.options;
  if(w.pain&&typeof w.pain==='object')pain=w.pain;
  if(w.plans&&typeof w.plans==='object')plans=w.plans;
@@ -25,13 +29,46 @@ function labSaveSoon(){clearTimeout(labTimer);labTimer=setTimeout(labSave,400);}
  for(const [id,key] of [['#fte','fte'],['#weeks','weeks'],['#weeklyRate','weeklyRate'],['#wip','wip'],['#lab-product-customers','productCustomers']]){
   const el=$(id);if(el&&settings[key]!==undefined)el.value=settings[key];
  }
-})();
+ $('#delay').value=delay;
+}
+function labDownload(text,name){
+ const url=URL.createObjectURL(new Blob([text],{type:'application/json'}));
+ const a=document.createElement('a');a.href=url;a.download=name;a.click();URL.revokeObjectURL(url);
+}
+document.body.inert=true;
+const loaded=await persistence.load();
+if(loaded.ok&&loaded.workspace){
+ const error=validateDocument('lab',LAB_STORAGE_VERSION,loaded.workspace);
+ if(error){loaded.ok=false;loaded.error=error}else restoreLab(loaded.workspace);
+}
+if(!loaded.ok)labBlocked=true;
+$('#lab-storage').textContent=loaded.ok?(persistence.mode==='sql'?'PostgreSQL · '+persistence.workspaceId:'Lokal nettleserlagring'):'Autolagring stoppet: '+loaded.error;
+$('#lab-migrate').hidden=persistence.mode!=='sql';
+$('#lab-recovery').hidden=!persistence.recovery();
+if(loaded.recovery)$('#lab-storage').textContent+=' · Lokalt nødutkast finnes; last det ned før videre arbeid.';
 document.addEventListener('input',labSaveSoon,true);
 document.addEventListener('change',labSaveSoon,true);
 document.addEventListener('click',labSaveSoon,true);
-$('#lab-reset')?.addEventListener('click',e=>{
+$('#lab-export').addEventListener('click',()=>labDownload(JSON.stringify(makeEnvelope(labSnapshot(),LAB_STORAGE_VERSION),null,1),'churn-studio-lab.json'));
+$('#lab-recovery').addEventListener('click',()=>{const raw=persistence.recovery();if(raw)labDownload(raw,'churn-studio-lab-nodutkast.json')});
+async function importLab(result){
+ if(!result.ok){$('#lab-storage').textContent='Import avvist: '+result.error;return}
+ const w=result.workspace;
+ const error=validateDocument('lab',LAB_STORAGE_VERSION,w);if(error){$('#lab-storage').textContent='Import avvist: '+error;return}
+ restoreLab(w);labBlocked=false;render();await labSave(true);
+}
+$('#lab-import').addEventListener('change',async e=>{
+ const file=e.target.files?.[0];if(!file)return;e.target.value='';
+ try{await importLab(importEnvelope(await file.text(),LAB_STORAGE_KEY))}catch{$('#lab-storage').textContent='Importen kunne ikke leses.'}
+});
+$('#lab-migrate').addEventListener('click',async e=>{
+ if(e.target.dataset.armed!=='true'){e.target.dataset.armed='true';e.target.textContent='Bekreft overføring';return}
+ e.target.dataset.armed='';e.target.textContent='Flytt nettleserdata til SQL';await importLab(persistence.legacy());
+});
+$('#lab-reset').addEventListener('click',async e=>{
  if(e.target.dataset.armed!=='true'){e.target.dataset.armed='true';e.target.textContent='Bekreft nullstilling';return}
- safeClear(LAB_STORAGE_KEY);location.reload();
+ clearTimeout(labTimer);labBlocked=true;const result=await persistence.clear();
+ if(!result.ok){$('#lab-storage').textContent=result.error;return}location.reload();
 });
 const labels={A:'Forespørsel først',B:'Validert + læring'},caseLabels={low:'Lav',expected:'Forventet',high:'Høy'};
 function documentLinks(value){const parsed=parseDocumentLinks(value);return parsed.links.length?`<ul class="document-link-list">${parsed.links.map(l=>`<li><a href="${esc(l.url)}" target="_blank" rel="noopener noreferrer">${esc(l.title)} ↗</a></li>`).join('')}</ul>`:'<span class="no-documents">Ingen dokumentlenker lagt til.</span>';}
@@ -66,3 +103,5 @@ form.noValidate=true;dialog.addEventListener('close',()=>attempted=false);
 form.addEventListener('input',()=>{if(attempted)validateEditor();});form.addEventListener('change',()=>{const type=form.elements.namedItem('kind');if(type){$('#delivery-fields').hidden=type.value==='discovery';}if(attempted)validateEditor();});
 form.addEventListener('submit',e=>{e.preventDefault();attempted=true;if(!validateEditor(true))return;const fd=new FormData(form),value=k=>Number(fd.get(k)),tr=k=>Object.fromEntries(cases.map(c=>[c,value(k+'.'+c)]));if(editing.kind==='pain'){pain={name:fd.get('name'),customers:value('customers'),incidents:value('incidents'),unitCost:value('unitCost'),reach:value('reach'),reduction:tr('reduction'),owner:fd.get('owner'),source:fd.get('source'),documents:fd.get('documents'),unknown:fd.get('unknown')};}else{const o={id:editing.id||crypto.randomUUID(),name:fd.get('name'),kind:fd.get('kind'),evidence:fd.get('evidence'),effort:tr('effort'),benefit:fd.get('kind')==='discovery'?{low:0,expected:0,high:0}:tr('benefit'),annualCost:fd.get('kind')==='discovery'?0:value('annualCost'),once:value('once'),owner:fd.get('owner'),source:fd.get('source'),documents:fd.get('documents'),risk:fd.get('risk'),metric:fd.get('metric'),gate:fd.get('gate')};if(editing.id)options=options.map(x=>x.id===o.id?o:x);else options.push(o);}close();render();});
 render();
+lastLabSaved=JSON.stringify(labSnapshot());
+document.body.inert=false;

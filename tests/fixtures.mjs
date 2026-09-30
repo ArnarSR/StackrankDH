@@ -1,0 +1,10 @@
+import {examples} from '../dist/model.mjs';
+import {seedRoster} from '../dist/roster.mjs';
+import {seedRoadmap} from '../dist/roadmap-model.mjs';
+import {seedParameters} from '../dist/parameters.mjs';
+import {seedSegments} from '../dist/segments.mjs';
+import {seedProblems} from '../dist/problems.mjs';
+import {initialOptions,initialPain} from '../dist/decision-model.mjs';
+export const portfolio=()=>({items:structuredClone(examples),roster:seedRoster(),roadmap:seedRoadmap(),parameters:seedParameters(),segments:seedSegments(),problems:seedProblems(),businessUnits:[],github:{repo:'',project:''},compare:{a:'sc-platform',b:'sc-quick'},showBaseline:false});
+export const lab=()=>({options:structuredClone(initialOptions),pain:structuredClone(initialPain),plans:{A:['feature','discovery'],B:['diagnostics','wifi','discovery']},settings:{fte:2,weeks:13,weeklyRate:30000,wip:1,productCustomers:250000},delay:13});
+export const memoryStore=()=>{const data=new Map();return {getItem:k=>data.get(k)??null,setItem:(k,v)=>data.set(k,v),removeItem:k=>data.delete(k),data}};

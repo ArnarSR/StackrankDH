@@ -11,15 +11,17 @@ Hele grensesnittet og all dokumentasjon er på **norsk**. Beløp i **NOK**, form
 ## Kjør og verifiser
 
 ```
-npm start    # Python 3 sin HTTP-server på http://127.0.0.1:4173, serverer dist/
-npm test     # node --test, 137 tester, ingen avhengigheter
+npm start    # Node-server med PostgreSQL; krever .env og npm run db:migrate
+npm run start:local  # Statisk utgave med nettleserlagring
+npm test     # 144 modell-, adapter- og smoke-tester
+npm run test:integration  # 12 tester mot separat PostgreSQL-testdatabase
 ```
 
-**Ingen npm-pakker, ingen byggefase, ingen rammeverk.** Ren HTML/CSS/ES-moduler servert direkte fra `dist/`. Dette er et bevisst premiss — ikke innfør en bundler, TypeScript eller et rammeverk uten å spørre først.
+**Ingen byggefase eller frontendrammeverk.** Ren HTML/CSS/ES-moduler fra `dist/`. SQL-bestillingen 30.09.2026 tillater Node 22+ og PostgreSQL-driveren `pg` på serveren. Ikke innfør bundler, TypeScript eller frontendrammeverk uten en ny beslutning.
 
 Kjør alltid `npm test` før du er ferdig. UI-endringer må i tillegg verifiseres i nettleser: last siden, sjekk konsollen for feil, og kontroller mobilvisning (375 px) og kontrast.
 
-**Praktisk felle:** utviklingsserveren sender ingen cache-headere. Nettleseren serverer gjerne gamle `.mjs`- og `.css`-filer etter en endring, slik at det ser ut som koden din ikke virker. Tving ny henting med `fetch(url, {cache:'reload'})` på de endrede filene før du laster på nytt, eller bruk en cache-bust i URL-en.
+**Praktisk felle:** den statiske Python-serveren sender ingen cache-headere. Node-serveren sender `Cache-Control: no-store`. Nettleseren serverer gjerne gamle `.mjs`- og `.css`-filer etter en endring, slik at det ser ut som koden din ikke virker. Tving ny henting med `fetch(url, {cache:'reload'})` på de endrede filene før du laster på nytt, eller bruk en cache-bust i URL-en.
 
 ## Regler du ikke skal bryte
 
@@ -41,7 +43,7 @@ Flere av disse er låst av tester. Hvis en test med et norsk navn som beskriver 
 
 Ikke omgjør disse uten å spørre brukeren (Arnar) eksplisitt.
 
-- **Lagring er lokal, ikke i sky.** `localStorage` + eksport/import av JSON. Skylagring med konto og delt database ble vurdert og valgt bort 25.09.2026: GitHub Pages kan ikke kjøre backend, dataene er forretningssensitive, og sikkerheten ville hvilt på tilgangsregler i en ekstern tjeneste der API-nøkkelen ligger åpent i klienten. **Ikke innfør innlogging eller en ekstern database.**
+- **Lagring: PostgreSQL bak et server-API.** Eksplisitt endret av Arnar 30.09.2026. `npm start` bruker SQL via `server/`; `npm run start:local` og GitHub Pages bruker fortsatt lokal nettleserlagring. Serveren holder databaselegitimasjon, portefølje og lab lagres separat som versjonerte JSONB-dokumenter, og skriving krever forventet revisjon. Databasefeil skal aldri gi stille lokal fallback. Denne utgaven er kun tilgjengelig på loopback; SSO/autorisasjon og HTTPS må på plass før ekstern deling. Se `SQL-PLAN.md` og `SQL-STORAGE.md`.
 - **GitHub-integrasjon uten autentisering.** Projects v2 er GraphQL-only og krever `read:project`; en statisk side har ingen trygg plass å holde en token. Vi bygger forhåndsutfylte issue-URL-er brukeren selv sender inn. **Ikke innfør tokenhåndtering.**
 - **Prioriteringslaben er konvergert mot veikartets tidsmodell** (felles motor i `dist/timeline.mjs`). Porteføljens 12-månedersmodell står bevisst utenfor.
 
@@ -61,7 +63,10 @@ Ren modell adskilt fra grensesnitt. Modellfilene er testbare uten DOM; `*-ui.mjs
 | `measure-draft.mjs` | Bevarer segmentrader ved dialoglagring og utleder deres verdier på nytt |
 | `problems.mjs` | Nåkostnader, «gjør ingenting»-kurve |
 | `parameters.mjs` | Kundebase og kundeverdi, arv og avvik |
-| `storage.mjs` | Lokal lagring, versjonering, import-validering |
+| `storage.mjs` | Eksportformat og lokal lagring |
+| `persistence.mjs` | Asynkron lokal/SQL-adapter, lagringskø, konflikter og eksplisitt v1-import |
+| `workspace-schema.mjs` | Felles strukturvalidering for dokument-API |
+| `server/` og `db/` | HTTP, PostgreSQL-repository, migreringer og rettigheter |
 | `github.mjs` | Issue-URL-er, CSV-eksport, URL-validering |
 | `router.mjs` | **Hash-ruting.** Rene parse/format-funksjoner + DOM-binding. Visningsregisteret bygger også venstremenyen |
 | `segments.mjs` | Segmenter som ikke overlapper, TAM/SAM/SOM, utledning av tiltakets skalarer |
@@ -77,7 +82,7 @@ Prioritert. De tre første er avgrensede og trygge; resten krever en beslutning 
 
 Visningen `#/business-units` viser nettoverdi per eiende BU og en bidragsmatrise i forventede ressursuker. Tiltaket har én `businessUnitId`; deltakere utledes bare av rollene på teamradene. Manglende/slettede koblinger vises som ufordelt. BU-registeret starter tomt, så det ikke påstås noe om reell organisering. Modell-, modulbaserte flyt- og statiske smoke-tester består; desktop, mobil (375 px), konsoll og visuell kontrast gjenstår fordi nettleserverktøyets administratorkontroll var utilgjengelig. Se `TESTING.md`.
 
-Porteføljens lagringsversjon er nå 2; labens er fortsatt 1. Gamle porteføljedata avvises som før, men autolagring settes på pause og originalen kan lastes ned. Ikke fjern denne beskyttelsen eller overskriv avviste data med eksempler.
+Porteføljens modellversjon er 2; labens er 1. Automatisk innlasting av v1-data avvises og pauses, mens eksplisitt import/overføring oppgraderer v1-porteføljen med ufordelt BU. Originale nettleserdata beholdes. SQL-nullstilling lager en historikkrevisjon; ikke slett historikk eller erstatt avviste data automatisk.
 
 ### 1. Eksponer tapstabellen for kontekstbytte
 
