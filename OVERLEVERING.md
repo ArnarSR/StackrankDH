@@ -2,6 +2,18 @@
 
 Status 24. september 2026. Dette dokumentet beskriver levert løsning og kjente begrensninger; foreslått videre arbeid er ikke en bestilling på automatisk omskriving.
 
+## Tillegg 30. september 2026 — Business Units
+
+Implementert fra commit `47501a7` på `feat/business-units`. Ny visning `#/business-units`: redigerbart BU-register, én `businessUnitId` per tiltak, BU per rolle og bidragsmatrise i forventede ressursuker. Hele nettoverdien tilhører tiltakets eier; deltakere utledes bare av teamradenes roller. Ukjente/slettede koblinger vises som ufordelt. Sletting krever to klikk, fjerner koblingene og bevarer økonomien. Ingen illustrative organisasjonstilknytninger er lagt inn.
+
+Nærliggende feil rettet: tiltaksdialogen bevarer segmentrader og låser avledede felt; en slettet rolle gjør innsatsen ufordelt i stedet for usynlig; tom tiltaksportefølje kan gjenopprettes; sletting av valgt tiltak går tilbake til porteføljen.
+
+Porteføljens lagringsversjon er økt til 2. Gammel lagring avvises etter gjeldende regel, men originaldata overskrives ikke: autolagring pauses og tidligere data kan lastes ned. Ingen migrering er implementert. Labens versjon forblir 1. Beslutningene om lokal lagring og GitHub uten token står fast.
+
+Verifisert: 137 beståtte tester, inkludert modellregler, BU-hendelsesflyt med enkel DOM-stub, eksport/import, regresjoner og statiske smoke-sjekker. Alle JavaScript-moduler er syntakssjekket. Nettlesersjekk ble forsøkt to ganger, men administratorkontrollen kunne ikke verifiseres. Desktop, 375 px mobil, konsoll og visuell kontrast er derfor ikke verifisert. Se `TESTING.md` før publisering.
+
+Neste foreslåtte arbeid: eksponer tapstabellen og gjennomstrømning, samle ukesats per rolle med eksplisitte overstyringer, og planlegg en validert migrering av versjon 1 til 2 med sikkerhetskopi og forhåndsvisning.
+
 ## Formål
 
 Et norsk beslutningsverktøy for produktledere i telekom, særlig bredbånd og Wi-Fi. Brukeren vil beregne verdien av churn-tiltak, synliggjøre ressursbehov, dokumentasjon og risiko, og sammenligne leveranser med arbeid på uvaliderte kundeproblemer.

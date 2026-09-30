@@ -12,7 +12,7 @@ Hele grensesnittet og all dokumentasjon er på **norsk**. Beløp i **NOK**, form
 
 ```
 npm start    # Python 3 sin HTTP-server på http://127.0.0.1:4173, serverer dist/
-npm test     # node --test, 124 tester, ingen avhengigheter
+npm test     # node --test, 137 tester, ingen avhengigheter
 ```
 
 **Ingen npm-pakker, ingen byggefase, ingen rammeverk.** Ren HTML/CSS/ES-moduler servert direkte fra `dist/`. Dette er et bevisst premiss — ikke innfør en bundler, TypeScript eller et rammeverk uten å spørre først.
@@ -57,6 +57,8 @@ Ren modell adskilt fra grensesnitt. Modellfilene er testbare uten DOM; `*-ui.mjs
 | `roadmap-model.mjs` | Veikart, scenarioer, CD3, låst verdi, dekning |
 | `decision-model.mjs` | Prioriteringslaben (egen datamodell, felles tidsmodell) |
 | `roster.mjs` | Roller, ferdigheter, kapasitet, oppgaver |
+| `business-units.mjs` | Én verdieier per tiltak, bidragsmatrise i ressursuker, ufordelt eierskap/innsats |
+| `measure-draft.mjs` | Bevarer segmentrader ved dialoglagring og utleder deres verdier på nytt |
 | `problems.mjs` | Nåkostnader, «gjør ingenting»-kurve |
 | `parameters.mjs` | Kundebase og kundeverdi, arv og avvik |
 | `storage.mjs` | Lokal lagring, versjonering, import-validering |
@@ -71,9 +73,11 @@ Alt av tilstand ligger i minnet i modulvariabler og lagres via `snapshot()`/`res
 
 Prioritert. De tre første er avgrensede og trygge; resten krever en beslutning før koding.
 
-### 0. Business Units — neste ut
+### 0. Business Units — implementert, nettleserverifisering gjenstår
 
-Eneste gjenstående punkt fra bestillingen om sidevisninger og segmenter. Én BU eier verdien per tiltak, deltakende BU-er utledes av rollene på teamradene (`roster.mjs` får `businessUnitId`). Ny visning som viser nettoverdi per eiende BU og en matrise over hvem som høster mot hvem som må bidra. Entydig eierskap er valgt nettopp for at summen per BU ikke skal kunne dobbelttelle.
+Visningen `#/business-units` viser nettoverdi per eiende BU og en bidragsmatrise i forventede ressursuker. Tiltaket har én `businessUnitId`; deltakere utledes bare av rollene på teamradene. Manglende/slettede koblinger vises som ufordelt. BU-registeret starter tomt, så det ikke påstås noe om reell organisering. Modell-, modulbaserte flyt- og statiske smoke-tester består; desktop, mobil (375 px), konsoll og visuell kontrast gjenstår fordi nettleserverktøyets administratorkontroll var utilgjengelig. Se `TESTING.md`.
+
+Porteføljens lagringsversjon er nå 2; labens er fortsatt 1. Gamle porteføljedata avvises som før, men autolagring settes på pause og originalen kan lastes ned. Ikke fjern denne beskyttelsen eller overskriv avviste data med eksempler.
 
 ### 1. Eksponer tapstabellen for kontekstbytte
 

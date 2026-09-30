@@ -83,6 +83,18 @@ To forbehold er verdt å merke seg. Forslaget sekvenserer **alle** tiltak — de
 
 ## Roller, oppgaver og GitHub
 
+Rollelisten og oppgavene er beskrevet nedenfor. BU-fordelingen gir i tillegg en organisasjonsvisning av de samme tiltakene og teamradene.
+
+### Business Units
+
+Åpne «Business Units» i menyen (`#/business-units`). Opprett egne BU-er og gi hvert tiltak én eiende BU, enten i oversikten eller under «Rediger antakelser». Knytt rollene til BU-er under «Roller og kapasitet».
+
+Hele tiltakets bruttoverdi, kostnad og nettoverdi vises hos eieren med porteføljens 12-månedersmodell. Deltakende BU-er utledes av rollene på teamradene. Matrisens rader er eiere, kolonnene er bidragsytere, og cellene viser forventede ressursuker. Flere roller fra samme BU gir én deltaker, men innsatsen fra hver teamrad telles med. Oppgaver tilfører ingen ekstra innsats eller verdi i matrisen.
+
+Manglende eller slettede koblinger vises som «Ufordelt». Fjerning av en BU krever to klikk og gjør koblingene ufordelte; den endrer ingen økonomiske tall. Oversikten fordeler ikke verdi på bidragsytere, og summer er fortsatt ukorrigerte for overlapp mellom tiltak. BU-registeret starter tomt.
+
+### Roller og oppgaver
+
 Rollelisten definerer hvilke roller teamet har, med enkle ferdigheter og tilgjengelig kapasitet i fulltidsekvivalenter. Teamrader på et tiltak kan peke på en rolle; gjør de ikke det, havner innsatsen i «ufordelt etterspørsel» i stedet for å forsvinne. Kapasitetstabellen viser etterspurte ressursuker mot tilgjengelige rolleuker over horisonten.
 
 Oppgaver hører til en teamrad. **Oppgaver påvirker aldri økonomien** — teamraden er fortsatt eneste kilde til kostnad. Summen av oppgavenes estimat holdes mot teamradens ressursuker, og differansen vises som «ikke brutt ned ennå» eller «over teamraden» i stedet for å avstemmes i stillhet. Oppgaver som peker på en slettet teamrad blir synlige, ikke borte.
@@ -98,6 +110,8 @@ Alt du skriver inn lagres automatisk i **din egen nettleser** (`localStorage`), 
 - **Nullstill** sletter lagret data og henter eksempeldataene tilbake. Krever bekreftelse i to steg.
 
 Lagret data har et versjonsnummer. Endres datamodellen senere, avvises gammel data med en forklaring i stedet for å lastes halvveis inn — en halvt gjenopprettet arbeidsflate er farligere enn eksempeldata.
+
+BU-utgaven bruker versjon 2 for porteføljen. Versjon 1 avvises; autolagring settes på pause og «Last ned tidligere data» bevarer originalen som fil. Ingen automatisk konvertering er innført. Eksporter gamle data før oppgradering; ikke nullstill før sikkerhetskopien er sikret. Prioriteringslaben beholder lagringsversjon 1 og påvirkes ikke av BU-endringen.
 
 Nettleserlagring kan feile: privat modus, full kvote eller blokkerte nettsteddata. Appen fanger det, sier fra i statuslinjen og fortsetter å virke i minnet. Får du den meldingen, eksporter til fil.
 

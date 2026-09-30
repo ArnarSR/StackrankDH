@@ -1,7 +1,8 @@
 // Lagring i nettleseren, med versjon. Lagret data som ikke stemmer med dagens
 // modell avvises heller enn å lastes halvveis inn – da er eksempeldataene et
 // tryggere utgangspunkt enn en halvt gjenopprettet arbeidsflate.
-export const STORAGE_VERSION=1;
+export const STORAGE_VERSION=2;
+export const LAB_STORAGE_VERSION=1;
 export const STORAGE_KEY='churn-studio:workspace';
 export const LAB_STORAGE_KEY='churn-studio:lab';
 const APP='churn-studio';
@@ -10,6 +11,16 @@ const isObject=v=>v!==null&&typeof v==='object'&&!Array.isArray(v);
 // Strukturkrav. Valideringsfeil i innholdet er brukerens sak; feil form er vår.
 export function checkWorkspace(workspace){
  if(!isObject(workspace))return 'Filen mangler et gyldig arbeidsområde.';
+ if('businessUnits' in workspace){
+  if(!Array.isArray(workspace.businessUnits))return 'BU-listen har feil format.';
+  const ids=new Set();
+  for(const u of workspace.businessUnits){
+   if(!isObject(u)||typeof u.id!=='string'||!u.id||ids.has(u.id)||typeof u.name!=='string')return 'BU-listen har ugyldige navn eller ID-er.';
+   ids.add(u.id);
+  }
+ }
+ if(Array.isArray(workspace.items)&&workspace.items.some(t=>!isObject(t)||('businessUnitId' in t&&typeof t.businessUnitId!=='string')))return 'Tiltakets BU-eier har feil format.';
+ if(Array.isArray(workspace.roster?.roles)&&workspace.roster.roles.some(r=>!isObject(r)||('businessUnitId' in r&&typeof r.businessUnitId!=='string')))return 'Rollens BU har feil format.';
  if('items' in workspace&&!Array.isArray(workspace.items))return 'Tiltakslisten har feil format.';
  if('problems' in workspace&&!Array.isArray(workspace.problems))return 'Problemlisten har feil format.';
  for(const key of ['roadmap','roster','parameters','github'])
@@ -20,13 +31,13 @@ export function checkWorkspace(workspace){
   return 'Rollelisten har feil format.';
  return null;
 }
-export function parseEnvelope(text){
+export function parseEnvelope(text,version=STORAGE_VERSION){
  let data;
  try{data=JSON.parse(text)}catch{return {ok:false,error:'Filen er ikke gyldig JSON.'}}
  if(!isObject(data))return {ok:false,error:'Filen inneholder ikke et lagret arbeidsområde.'};
  if(data.app!==APP)return {ok:false,error:'Filen ser ikke ut til å komme fra Churn Studio.'};
- if(data.version!==STORAGE_VERSION)
-  return {ok:false,error:`Filen er lagret med version ${data.version??'ukjent'}, men denne utgaven bruker ${STORAGE_VERSION}. Den kan ikke leses inn.`};
+ if(data.version!==version)
+  return {ok:false,error:`Filen er lagret med version ${data.version??'ukjent'}, men denne utgaven bruker ${version}. Den kan ikke leses inn.`};
  const problem=checkWorkspace(data.workspace);
  if(problem)return {ok:false,error:problem};
  return {ok:true,workspace:data.workspace,savedAt:data.savedAt??null};
@@ -37,13 +48,13 @@ export function safeRead(key,store=globalThis.localStorage){
  try{
   const raw=store?.getItem(key);
   if(!raw)return {ok:true,workspace:null};
-  const result=parseEnvelope(raw);
+  const result=parseEnvelope(raw,key===LAB_STORAGE_KEY?LAB_STORAGE_VERSION:STORAGE_VERSION);
   return result.ok?{ok:true,workspace:result.workspace,savedAt:result.savedAt}:{ok:false,error:result.error};
  }catch(e){return {ok:false,error:'Kunne ikke lese lagret data: '+(e?.message??'ukjent feil')}}
 }
 export function safeWrite(key,workspace,store=globalThis.localStorage){
  try{
-  store?.setItem(key,JSON.stringify(makeEnvelope(workspace)));
+  store?.setItem(key,JSON.stringify(makeEnvelope(workspace,key===LAB_STORAGE_KEY?LAB_STORAGE_VERSION:STORAGE_VERSION)));
   return {ok:true};
  }catch(e){
   const full=e?.name==='QuotaExceededError'||e?.code===22;

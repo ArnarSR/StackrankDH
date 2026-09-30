@@ -1,5 +1,6 @@
 import {seedRoster,roleDemand,measureRoles,taskBreakdown,taskStatuses,roleName,validateRoster} from './roster.mjs';
 import {parseRepo,issueUrl,safeIssueUrl,tasksToCsv} from './github.mjs';
+import {businessUnitOptions} from './business-units-ui.mjs';
 const $=id=>document.getElementById(id);
 const number=(v,d=0)=>new Intl.NumberFormat('nb-NO',{maximumFractionDigits:d,minimumFractionDigits:d}).format(v);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -15,6 +16,7 @@ export function renderRoster(){renderRoleRows();renderCapacity();}
 function renderRoleRows(){
  $('role-rows').innerHTML=roster.roles.map(role=>`<div class="role-row" data-role-id="${esc(role.id)}">
   <label class="role-name">Rolle<input data-field="name" value="${esc(role.name)}" maxlength="80"></label>
+  <label>Business Unit<select data-field="businessUnitId">${businessUnitOptions(role.businessUnitId)}</select></label>
   <label>Kapasitet (FTE)<input data-field="capacity" type="number" min="0" max="1000" step="0.1" value="${role.capacity}"></label>
   <label class="role-skills">Ferdigheter<input data-field="skills" value="${esc((role.skills??[]).join(', '))}" maxlength="200" placeholder="Komma mellom hver"></label>
   <button type="button" class="danger" data-remove-role="${esc(role.id)}">${removeLabel('role:'+role.id)}</button>
@@ -87,6 +89,7 @@ export function bindRoster(getItems,onChange){
   const role=roster.roles.find(r=>r.id===e.target.closest('[data-role-id]').dataset.roleId);
   if(field==='skills')role.skills=e.target.value.split(',').map(s=>s.trim()).filter(Boolean);
   else if(field==='capacity')role.capacity=e.target.valueAsNumber;
+  else if(field==='businessUnitId')role.businessUnitId=e.target.value;
   else role.name=e.target.value;
   renderCapacity();onChange?.();
  });

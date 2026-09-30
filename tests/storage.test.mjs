@@ -6,6 +6,15 @@ import {seedRoadmap} from '../dist/roadmap-model.mjs';
 import {seedRoster} from '../dist/roster.mjs';
 import {seedProblems} from '../dist/problems.mjs';
 import {seedParameters} from '../dist/parameters.mjs';
+import {LAB_STORAGE_KEY,LAB_STORAGE_VERSION} from '../dist/storage.mjs';
+
+test('BU-endringen endrer ikke lagringsversjonen eller dataene i prioriteringslaben',()=>{
+ const store=fakeStore(),w={options:[],plans:[]};
+ assert.equal(LAB_STORAGE_VERSION,1);
+ safeWrite(LAB_STORAGE_KEY,w,store);
+ assert.equal(JSON.parse(store._data[LAB_STORAGE_KEY]).version,1);
+ assert.deepEqual(safeRead(LAB_STORAGE_KEY,store).workspace,w);
+});
 
 const workspace=()=>({items:structuredClone(examples),roadmap:seedRoadmap(),roster:seedRoster(),problems:seedProblems(),parameters:seedParameters()});
 const fakeStore=(initial={})=>{const data={...initial};return {

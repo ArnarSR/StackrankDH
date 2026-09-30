@@ -78,7 +78,7 @@
 .coverage-report{background:#fffaf0;border-color:#f0e4cc}
 .roster{margin-top:22px}
 .roster-body{padding:0 24px 22px;display:grid;grid-template-columns:minmax(0,1fr);gap:16px}
-.role-row{display:grid;grid-template-columns:1.3fr .7fr 1.6fr auto;gap:12px;align-items:end;padding:12px;border:1px solid var(--line);border-radius:8px;background:#fbfcfd}
+.role-row{display:grid;grid-template-columns:1.3fr 1fr .7fr 1.6fr auto;gap:12px;align-items:end;padding:12px;border:1px solid var(--line);border-radius:8px;background:#fbfcfd}
 .role-row label{display:grid;gap:6px;font-size:11px;color:#5d6e76;min-width:0}
 .role-row input{border:1px solid #cfdce1;border-radius:6px;padding:9px;font:inherit;font-size:14px;width:100%;background:white;color:var(--ink)}
 .role-row .danger{font-size:12px;padding:9px 8px}
@@ -267,3 +267,15 @@
 .impact-effect input{border:1px solid #cfdce1;border-radius:6px;padding:8px;font:inherit;font-size:13px;width:100%;background:white;color:var(--ink)}
 .impact-note{margin:0;font-size:11px;color:#5d6e76;line-height:1.5}
 @media(max-width:900px){.segment-totals,.impact-funnel{grid-template-columns:1fr}.segment-row{grid-template-columns:1fr 1fr}.segment-row .segment-name{grid-column:1/-1}.impact-effect{grid-template-columns:1fr 1fr}}
+.bu-body{padding:24px;min-width:0}
+.bu-body h3{margin-top:28px}
+.bu-body>p{color:#52646d;line-height:1.6}
+#bu-rows{display:grid;gap:12px}
+.bu-row{display:flex;align-items:end;gap:12px}
+.bu-row label{display:grid;gap:6px;flex:1;min-width:0;color:#52646d;font-size:13px}
+.bu-row input,.bu-body select,.role-row select{width:100%;min-width:0;border:1px solid #cfdce1;border-radius:6px;padding:9px;font:inherit;background:#fff;color:var(--ink)}
+.bu-body caption{text-align:left;color:#52646d;font-size:13px;padding:12px 0}
+.bu-body th,.bu-body td{white-space:nowrap}
+.bu-body tfoot{font-weight:700;border-top:2px solid var(--line)}
+.bu-body select{min-width:150px}
+@media(max-width:600px){.bu-body{padding:14px}.bu-row{align-items:center}.role-row{grid-template-columns:minmax(0,1fr)}.role-row .role-skills{grid-column:auto}}

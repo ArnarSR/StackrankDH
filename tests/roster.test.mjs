@@ -60,6 +60,7 @@ test('Teamrader uten rolle telles som ufordelt etterspørsel',()=>{
  const loose={...base,teams:[{...team,roleId:''}]};
  assert.equal(roleDemand([loose],roster).unassigned,10);
  assert.equal(roleDemand([base],roster).unassigned,0);
+ assert.equal(roleDemand([{...base,teams:[{...team,roleId:'slettet'}]}],roster).unassigned,10);
 });
 
 test('Roller og oppgaver valideres med konkrete feltreferanser',()=>{

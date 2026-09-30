@@ -6,7 +6,7 @@ import {examples,evidence,strategicFit,calculate,sortMeasures,scenario} from './
 import {renderRoadmap,renderStrategy,renderBoard,renderScenarios,bindRoadmap,measureRoadmapFields,readMeasureRoadmapFields} from './roadmap-ui.mjs';
 import {renderRoster,bindRoster,renderTasks,currentRoster} from './roster-ui.mjs';
 import {renderProblems,bindProblems,bindBaselineToggle} from './problems-ui.mjs';
-import {renderParameters,bindParameters,measureValueField,applyValueChoice,standardCustomerValue,syncValueField} from './parameters-ui.mjs';
+import {renderParameters,bindParameters,measureValueField,standardCustomerValue,syncValueField} from './parameters-ui.mjs';
 import {STORAGE_KEY,safeRead,safeWrite,safeClear,parseEnvelope,makeEnvelope,exportName} from './storage.mjs';
 import {views,parseRoute,routeHash,navigate,bindRouter,DEFAULT_VIEW} from './router.mjs';
 import {renderSegments,renderMeasureSegments,bindSegments,syncSegments,snapshotSegments,restoreSegments,currentSegments,setMeasureContext} from './segments-ui.mjs';
@@ -14,6 +14,9 @@ import {snapshotRoadmap,restoreRoadmap} from './roadmap-ui.mjs';
 import {snapshotRoster,restoreRoster} from './roster-ui.mjs';
 import {snapshotProblems,restoreProblems} from './problems-ui.mjs';
 import {snapshotParameters,restoreParameters,currentParameters} from './parameters-ui.mjs';
+import {renderBusinessUnits,bindBusinessUnits,snapshotBusinessUnits,restoreBusinessUnits,measureBusinessUnitField} from './business-units-ui.mjs';
+import {usesSegments} from './segments.mjs';
+import {mergeMeasureDraft} from './measure-draft.mjs';
 const $=id=>document.getElementById(id);
 const number=(v,d=0)=>new Intl.NumberFormat('nb-NO',{maximumFractionDigits:d,minimumFractionDigits:d}).format(v);
 const money=v=>number(v)+' kr';
@@ -41,6 +44,7 @@ function renderView(){
  const byView={
   measure:()=>{const t=items.find(x=>x.id===route.measureId);if(t){selected=t.id;renderDetail()}},
   segments:renderSegments,
+  businessUnits:renderBusinessUnits,
   capacity:renderCapacity,
   strategy:renderStrategy,
   roadmap:renderBoard,
@@ -83,7 +87,7 @@ function updateSensitivity(){const t=items.find(x=>x.id===selected);if(!t)return
  const expectedX=x(t.expected);const chartTitle=`Nettoverdi ved churn-reduksjon fra ${pp(lo)} til ${pp(hi)}. Nå ${money(c.net)} ved ${pp(reduction)}.`;
  $('chart').innerHTML=`<div class="chart-wrap"><svg viewBox="0 0 510 180" role="img" aria-label="${esc(chartTitle)}"><text x="65" y="15">NOK</text>${grid}<path d="M ${x(lo)} ${y(lowNet)} L ${x(hi)} ${y(highNet)} L ${x(hi)} ${y(0)} L ${x(lo)} ${y(0)} Z" fill="#e9f4ef" opacity=".65"/><line x1="65" y1="${y(0)}" x2="475" y2="${y(0)}" stroke="#a3b6bc" stroke-dasharray="4 4"/><line x1="${x(lo)}" y1="${y(lowNet)}" x2="${x(hi)}" y2="${y(highNet)}" stroke="#2d7a64" stroke-width="2.5"/><line x1="${expectedX}" x2="${expectedX}" y1="${y(calculate(t).net)}" y2="150" stroke="#94bba8" stroke-dasharray="3 4"/>${[t.low,t.expected,t.high].map((r,i)=>`<circle cx="${x(r)}" cy="${y(calculate(t,r).net)}" r="${i===1?5:3.5}" fill="${i===1?'#285e4d':'#fff'}" stroke="#2d7a64" stroke-width="1.5"/>`).join('')}<circle cx="${x(reduction)}" cy="${y(c.net)}" r="7" fill="#c1ee93" stroke="#21634e" stroke-width="2"/><text x="65" y="166">${pp(lo)}</text><text x="475" y="166" text-anchor="end">${pp(hi)}</text><text x="${expectedX}" y="166" text-anchor="middle" class="dot-label">Forventet</text></svg></div>`;
 }
-function openEditor(id=null){editing=id;deleteArmed=false;const t=id?items.find(x=>x.id===id):{name:'',description:'',segment:'',customers:Math.min(100000,productCustomers),reach:50,baseline:8,value:6000,low:0,expected:.3,high:.6,cost:0,setup:0,costItems:[],teams:[],sources:[],effectSourceId:'',risks:[],confidence:'hypothesis',evidence:'',strategicFit:'medium',strategicFitNote:'',horizon:'',requires:[],keyResultIds:[],valueOverride:false};formValidation.reset();$('form').reset();renderResourceEditor(t);$('roadmap-editor-section').innerHTML=measureRoadmapFields(t,items)+measureValueField(t);Object.entries(t).forEach(([key,value])=>{const el=$('form').elements.namedItem(key);if(el&&!Array.isArray(value))el.value=value});syncValueField();$('editor-title').textContent=id?'Rediger tiltak':'Nytt tiltak';$('delete').hidden=!id;$('delete').textContent='Slett tiltak';$('form-error').textContent='';$('editor').showModal();$('form').elements.namedItem('customers').max=productCustomers;$('form').elements.namedItem('name').focus();}
+function openEditor(id=null){editing=id;deleteArmed=false;const t=id?items.find(x=>x.id===id):{name:'',description:'',segment:'',customers:Math.min(100000,productCustomers),reach:50,baseline:8,value:6000,low:0,expected:.3,high:.6,cost:0,setup:0,costItems:[],teams:[],sources:[],effectSourceId:'',risks:[],confidence:'hypothesis',evidence:'',strategicFit:'medium',strategicFitNote:'',horizon:'',requires:[],keyResultIds:[],valueOverride:false};formValidation.reset();$('form').reset();renderResourceEditor(t);$('roadmap-editor-section').innerHTML=measureRoadmapFields(t,items)+measureValueField(t)+measureBusinessUnitField(t);Object.entries(t).forEach(([key,value])=>{const el=$('form').elements.namedItem(key);if(el&&!Array.isArray(value))el.value=value});syncValueField();for(const key of ['customers','reach','low','expected','high','value']){const el=$('form').elements.namedItem(key);if(usesSegments(t)){el.disabled=true;el.title='Utledes av segmentradene på tiltakssiden.'}else{if(key!=='value')el.disabled=false;el.title=''}}if(usesSegments(t))$('form').elements.namedItem('valueOverride').disabled=true;$('editor-title').textContent=id?'Rediger tiltak':'Nytt tiltak';$('delete').hidden=!id;$('delete').textContent='Slett tiltak';$('form-error').textContent='';$('editor').showModal();$('form').elements.namedItem('customers').max=productCustomers;$('form').elements.namedItem('name').focus();}
 function closeEditor(){$('editor').close()}
 function select(id){selected=id;navigate({view:'measure',measureId:id});$('live').textContent=`Viser ${items.find(x=>x.id===id)?.name??'tiltaket'}.`}
 function focusSelected(){document.querySelector(`[data-select="${selected}"]`)?.focus({preventScroll:true})}
@@ -99,25 +103,26 @@ $('common-risk').addEventListener('change',e=>{
 });
  $('edit-resources').addEventListener('click',()=>{openEditor(selected);$('resource-editor-section').scrollIntoView({block:'start'});});
  $('sort').addEventListener('change',render);$('sensitivity').addEventListener('input',updateSensitivity);$('add').addEventListener('click',()=>openEditor());$('edit').addEventListener('click',()=>openEditor(selected));$('close').addEventListener('click',closeEditor);$('cancel').addEventListener('click',closeEditor);
- function readDraft(){const raw=Object.fromEntries(new FormData($('form')));const t={...raw,...readResourceEditor(),...readMeasureRoadmapFields($('form')),valueOverride:$('form').elements.namedItem('valueOverride')?.checked??false,cost:0,setup:0,productCustomers,id:editing??'draft',name:(raw.name??'').trim()};['customers','reach','baseline','value','low','expected','high'].forEach(k=>t[k]=raw[k]?.trim()===''?NaN:Number(raw[k]));return applyValueChoice(t);}
- $('form').addEventListener('submit',e=>{e.preventDefault();if(!formValidation.check())return;const t=readDraft();if(!editing)t.id=crypto.randomUUID();if(editing)items=items.map(x=>x.id===editing?t:x);else items.push(t);selected=t.id;closeEditor();render();$('live').textContent='Tiltaket er lagret for denne økten.';});
- $('delete').addEventListener('click',()=>{if(!deleteArmed){deleteArmed=true;$('delete').textContent='Bekreft sletting';$('form-error').textContent='Klikk «Bekreft sletting» for å fjerne tiltaket.';return}items=items.filter(x=>x.id!==editing);selected=items[0]?.id;closeEditor();render();$('add').focus();$('live').textContent='Tiltaket er slettet.'});
+ function readDraft(){const raw=Object.fromEntries(new FormData($('form')));const original=items.find(x=>x.id===editing);const t={...raw,...readResourceEditor(),...readMeasureRoadmapFields($('form')),valueOverride:$('form').elements.namedItem('valueOverride')?.checked??false,cost:0,setup:0,productCustomers,id:editing??'draft',name:(raw.name??'').trim()};['customers','reach','baseline','value','low','expected','high'].forEach(k=>t[k]=raw[k]?.trim()===''?NaN:Number(raw[k]));return mergeMeasureDraft(original,t,currentSegments(),standardCustomerValue());}
+ $('form').addEventListener('submit',e=>{e.preventDefault();if(!formValidation.check())return;const t=readDraft();if(!editing)t.id=crypto.randomUUID();if(editing)items=items.map(x=>x.id===editing?t:x);else items.push(t);selected=t.id;closeEditor();render();$('live').textContent='Tiltaket er lagret.';});
+ $('delete').addEventListener('click',()=>{if(!deleteArmed){deleteArmed=true;$('delete').textContent='Bekreft sletting';$('form-error').textContent='Klikk «Bekreft sletting» for å fjerne tiltaket.';return}items=items.filter(x=>x.id!==editing);selected=items[0]?.id;closeEditor();navigate({view:DEFAULT_VIEW});render();$('add').focus();$('live').textContent='Tiltaket er slettet.'});
 $('edit-evidence').addEventListener('click',()=>{openEditor(selected);$('source-editor-section').scrollIntoView({block:'start',behavior:'instant'});});
 $('product-customers').addEventListener('input',()=>{const el=$('product-customers');if(!el.validity.valid){el.setAttribute('aria-invalid','true');$('product-warning').textContent='Antall kunder må være et heltall mellom 0 og 1 000 000 000. Beregningene bruker sist gyldige kundebase.';return;}el.removeAttribute('aria-invalid');productCustomers=el.valueAsNumber;render();});
 $('product-warning').addEventListener('click',e=>{const b=e.target.closest('[data-fix-product]');if(b)openEditor(b.dataset.fixProduct);});
 function renderProductWarnings(){const outside=items.filter(t=>t.customers>productCustomers);$('product-warning').innerHTML=outside.length?`<strong>${outside.length} tiltak har flere adresserbare kunder enn produktets kundebase. Rett anslagene før verdiene brukes.</strong>${outside.map(t=>`<button class="error-jump" data-fix-product="${esc(t.id)}">${esc(t.name)}: ${number(t.customers)} kunder – gå til tiltaket ↗</button>`).join('')}`:'';}
 // Autolagring i nettleseren. Feiler den, sier appen fra og fortsetter i minnet.
 function snapshot(){currentParameters().product.customers=productCustomers;
- return {items,...snapshotRoadmap(),...snapshotRoster(),...snapshotProblems(),...snapshotSegments(),parameters:snapshotParameters()};}
+ return {items,...snapshotRoadmap(),...snapshotRoster(),...snapshotProblems(),...snapshotSegments(),...snapshotBusinessUnits(),parameters:snapshotParameters()};}
 function applyWorkspace(w){
- if(Array.isArray(w.items)&&w.items.length){items=w.items;selected=items[0].id}
- restoreRoadmap(w);restoreRoster(w);restoreProblems(w);restoreSegments(w);restoreParameters(w.parameters);
+ if(Array.isArray(w.items)){items=w.items;selected=items[0]?.id}
+ restoreBusinessUnits(w);restoreRoadmap(w);restoreRoster(w);restoreProblems(w);restoreSegments(w);restoreParameters(w.parameters);
  const base=currentParameters()?.product?.customers;
  if(Number.isInteger(base)&&base>=0){productCustomers=base;$('product-customers').value=base}
 }
-let saveTimer=null,storageNote='';
+let saveTimer=null,storageNote='',storageBlocked=false;
 function setStorageState(state,detail){$('storage-state').textContent=state;$('storage-detail').textContent=detail;}
 function saveNow(){
+ if(storageBlocked)return;
  const result=safeWrite(STORAGE_KEY,snapshot());
  if(result.ok)setStorageState('Lagret i denne nettleseren',storageNote||'Endringene dine er her neste gang du åpner siden på denne maskinen.');
  else $('storage-error').textContent='Kunne ikke lagre: '+result.error+' Eksporter til fil for å ta vare på arbeidet.';
@@ -125,7 +130,18 @@ function saveNow(){
 function saveSoon(){clearTimeout(saveTimer);saveTimer=setTimeout(saveNow,400);}
 function loadStored(){
  const result=safeRead(STORAGE_KEY);
- if(!result.ok){$('storage-error').textContent='Tidligere lagret data kunne ikke leses: '+result.error+' Eksempeldataene vises i stedet.';return false}
+ if(!result.ok){
+  storageBlocked=true;
+  setStorageState('Autolagring er satt på pause','Tidligere data beholdes. Last ned sikkerhetskopien før import eller nullstilling.');
+  $('storage-error').textContent='Tidligere lagret data kunne ikke leses: '+result.error+' Eksempeldataene vises. ';
+  const button=document.createElement('button');button.className='secondary';button.textContent='Last ned tidligere data';
+  button.addEventListener('click',()=>{
+   try{const raw=localStorage.getItem(STORAGE_KEY);if(!raw)return;
+    const url=URL.createObjectURL(new Blob([raw],{type:'application/json'}));
+    const a=document.createElement('a');a.href=url;a.download='churn-studio-tidligere-data.json';a.click();URL.revokeObjectURL(url);
+   }catch{$('storage-error').append(' Kunne ikke lese sikkerhetskopien.')}
+  });$('storage-error').append(button);return false;
+ }
  if(!result.workspace)return false;
  applyWorkspace(result.workspace);
  storageNote='Sist lagret '+new Date(result.savedAt??Date.now()).toLocaleString('nb-NO')+'.';
@@ -146,6 +162,7 @@ $('import-workspace').addEventListener('change',async e=>{
  const result=parseEnvelope(await file.text());
  if(!result.ok){$('storage-error').textContent='Import avvist: '+result.error+' Ingenting er endret.';return}
  applyWorkspace(result.workspace);
+ storageBlocked=false;
  storageNote='Importert fra '+file.name+'.';
  render();saveNow();
  $('live').textContent='Arbeidsflaten er importert.';
@@ -154,7 +171,8 @@ $('reset-workspace').addEventListener('click',e=>{
  if(e.target.dataset.armed!=='true'){e.target.dataset.armed='true';e.target.textContent='Bekreft nullstilling';
   setStorageState('Nullstiller','Alt du har skrevet inn slettes og eksempeldataene kommer tilbake. Klikk igjen for å bekrefte.');return}
  e.target.dataset.armed='';e.target.textContent='Nullstill';
- safeClear(STORAGE_KEY);
+ clearTimeout(saveTimer);storageBlocked=true;
+ const cleared=safeClear(STORAGE_KEY);if(!cleared.ok){$('storage-error').textContent=cleared.error;return}
  items=structuredClone(examples);selected=items[0].id;
  storageNote='Nullstilt til eksempeldata.';
  location.reload();
@@ -163,6 +181,7 @@ document.addEventListener('input',saveSoon,true);
 document.addEventListener('change',saveSoon,true);
 document.addEventListener('click',saveSoon,true);
 loadStored();
+bindBusinessUnits(()=>items,currentRoster,saveSoon);
 bindRoadmap(()=>items,select);
 bindRoster(()=>items,()=>{if(items.length)renderTasks(items.find(x=>x.id===selected)??items[0])});
 bindProblems(()=>items,()=>renderRoadmap());

@@ -8,7 +8,7 @@ export const seedRoster=()=>({roles:[
  {id:'role-cx',name:'Kundeopplevelse',capacity:1.5,skills:['Tjenestedesign','Brukertest','Innholdsdesign'],note:'Illustrativ kapasitet.'},
  {id:'role-service',name:'Kundeservice',capacity:2,skills:['Arbeidsprosess','Opplæring','Pilotdrift'],note:'Illustrativ kapasitet.'},
  {id:'role-security',name:'Sikkerhet & personvern',capacity:1,skills:['Personvern','Risikovurdering','Leverandøravtaler'],note:'Illustrativ kapasitet.'}
-]});
+].map(role=>({...role,businessUnitId:''}))});
 export const roleById=(roster,id)=>(roster?.roles??[]).find(r=>r.id===id)??null;
 export const roleName=(roster,id)=>roleById(roster,id)?.name??'';
 // Oppgaver brytes ned under en teamrad. Teamraden er fortsatt eneste kilde til
@@ -49,7 +49,7 @@ export function roleDemand(items,roster,key='expected',horizonWeeks=104){
    utilisation:available>0?demand/available*100:null,over:available>0&&demand>available};
  });
  let unassigned=0;
- for(const t of items)for(const team of t.teams??[])if(!team.roleId)unassigned+=teamEffort(team,key);
+ for(const t of items)for(const team of t.teams??[])if(!roleById(roster,team.roleId))unassigned+=teamEffort(team,key);
  return {roles,unassigned};
 }
 export function validateRoster(roster){return validateRosterIssue(roster)?.message??'';}
