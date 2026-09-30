@@ -19,7 +19,7 @@ export function renderRoadmap(){renderStrategy();renderBoard();renderScenarios()
 export const snapshotRoadmap=()=>({roadmap,compare});
 export function restoreRoadmap(data){if(data?.roadmap)roadmap=data.roadmap;if(data?.compare)compare=data.compare;}
 
-function renderStrategy(){
+export function renderStrategy(){
  if($('vision').value!==roadmap.vision.statement)$('vision').value=roadmap.vision.statement;
  $('objective-list').innerHTML=roadmap.objectives.map(o=>`<div class="objective" data-objective-id="${esc(o.id)}">
   <div class="objective-head"><label>Objective<input data-field="title" value="${esc(o.title)}" maxlength="140"></label>
@@ -40,7 +40,7 @@ function renderStrategy(){
  ].filter(Boolean).join('')||'<span>Alle key results har minst ett tiltak, og alle tiltak er koblet og plassert.</span>';
 }
 
-function renderBoard(){
+export function renderBoard(){
  const all=items(),unlocked=new Map(unlocks(all).map(u=>[u.id,u]));
  const krTitle=id=>keyResults(roadmap).find(k=>k.id===id)?.title;
  const card=t=>{const u=unlocked.get(t.id),net=scenario(t).net;
@@ -61,7 +61,7 @@ function renderBoard(){
 
 function scenarioById(id){return roadmap.scenarios.find(s=>s.id===id);}
 
-function renderScenarios(){
+export function renderScenarios(){
  const all=items(),error=validateRoadmap(roadmap,all,[compare.a,compare.b]);
  $('scenario-error').textContent=error;
  const options=sel=>roadmap.scenarios.map(s=>`<option value="${esc(s.id)}"${s.id===sel?' selected':''}>${esc(s.name)}</option>`).join('');

@@ -3,11 +3,12 @@ import {riskSummary} from './risks.mjs';
 import {costBreakdown,resourcePortfolio,safeSourceUrl,sourceTypes} from './resources.mjs';
 import {renderResourceDetails,renderResourceEditor,readResourceEditor,bindResourceEditor,sourceReference} from './resource-ui.mjs';
 import {examples,evidence,strategicFit,calculate,sortMeasures,scenario} from './model.mjs';
-import {renderRoadmap,bindRoadmap,measureRoadmapFields,readMeasureRoadmapFields} from './roadmap-ui.mjs';
+import {renderRoadmap,renderStrategy,renderBoard,renderScenarios,bindRoadmap,measureRoadmapFields,readMeasureRoadmapFields} from './roadmap-ui.mjs';
 import {renderRoster,bindRoster,renderTasks,currentRoster} from './roster-ui.mjs';
 import {renderProblems,bindProblems,bindBaselineToggle} from './problems-ui.mjs';
 import {renderParameters,bindParameters,measureValueField,applyValueChoice,standardCustomerValue,syncValueField} from './parameters-ui.mjs';
 import {STORAGE_KEY,safeRead,safeWrite,safeClear,parseEnvelope,makeEnvelope,exportName} from './storage.mjs';
+import {views,parseRoute,routeHash,navigate,bindRouter,DEFAULT_VIEW} from './router.mjs';
 import {snapshotRoadmap,restoreRoadmap} from './roadmap-ui.mjs';
 import {snapshotRoster,restoreRoster} from './roster-ui.mjs';
 import {snapshotProblems,restoreProblems} from './problems-ui.mjs';
@@ -29,7 +30,37 @@ function render(){
  const cards=[['Forventet nettoverdi',compact(totals.net)+' kr','Sum av enkeltstående tiltak','highlight'],['Beholdte kunder',number(totals.retained),'Forventet · før korreksjon for overlapp',''],['Tiltakskostnad, første år',compact(totals.cost)+' kr','Tjenester, engangsposter og teaminnsats',''],['Tiltak med positivt lavscenario',items.filter(t=>scenario(t,'low').net>0).length+' av '+items.length,'Nettoverdi over null i lavscenarioet','']];
  $('metrics').innerHTML=cards.map(([label,value,note,cl])=>`<div class="metric ${cl}"><span class="metric-label">${label}</span><div class="metric-value">${value}</div><small>${note}</small></div>`).join('');$('count').textContent=items.length;
  $('rows').innerHTML=sorted.length?sorted.map((t,i)=>{const c=calculate(t),risk=riskSummary(t);return `<tr data-id="${esc(t.id)}" class="${selected===t.id?'selected':''}"><td><span class="rank">${String(i+1).padStart(2,'0')}</span></td><td><button class="name-button" data-select="${esc(t.id)}" aria-pressed="${selected===t.id}">${esc(t.name)}</button><div class="segment">${esc(t.segment)}</div></td><td>${badge(t)}</td><td>${fitBadge(t)}</td><td class="risk-cell"><button class="risk-jump ${risk.blocked?'risk-blocked':risk.severe?'risk-attention':''}" data-risk-jump="true">${risk.total?risk.active+(risk.active===1?' åpent forhold':' åpne forhold'):'Ikke registrert'}</button><small>${[risk.blocked?risk.blocked+' blokkert':null,risk.severe?risk.severe+(risk.severe===1?' risiko med høy konsekvens':' risikoer med høy konsekvens'):null].filter(Boolean).join(' · ')}</small></td><td>${number(c.retained,1)}</td><td class="money ${c.net<0?'negative':'positive'}" title="${money(c.net)}">${compact(c.net)} kr</td><td class="range-cell" title="${money(scenario(t,'low').net)} → ${money(scenario(t,'high').net)}">${compact(scenario(t,'low').net)} → ${compact(scenario(t,'high').net)}</td><td class="${c.roi<0?'negative':'positive'}">${c.roi===null?'—':number(c.roi)+' %'}</td><td aria-hidden="true">↗</td></tr>`}).join(''):'<tr><td colspan="10" class="empty">Ingen tiltak ennå. Legg til et tiltak for å starte beregningen.</td></tr>';
- $('analysis').hidden=!items.length;if(items.length)renderDetail();renderCapacity();renderRiskOverview();renderRoadmap();renderRoster();renderProblems();renderParameters();
+ renderView();
+}
+// Hver visning rendres bare når den er synlig. Rangeringen og nøkkeltallene over
+// bygges alltid, siden de er billige og flere visninger lenker til dem.
+let route={view:DEFAULT_VIEW};
+function renderView(){
+ const byView={
+  measure:()=>{const t=items.find(x=>x.id===route.measureId);if(t){selected=t.id;renderDetail()}},
+  capacity:renderCapacity,
+  strategy:renderStrategy,
+  roadmap:renderBoard,
+  scenarios:renderScenarios,
+  roster:renderRoster,
+  problems:renderProblems,
+  parameters:renderParameters
+ };
+ renderRiskOverview();
+ byView[route.view]?.();
+}
+function buildNav(){
+ $('rail-nav').innerHTML=Object.entries(views).filter(([,v])=>!v.hidden)
+  .map(([key,v])=>`<a class="nav" data-view="${key}" href="${routeHash({view:key})}"><span>${v.icon}</span> ${esc(v.label)}</a>`).join('');
+}
+function onNavigate(next){
+ route=next;
+ if(next.view==='measure'){
+  const t=items.find(x=>x.id===next.measureId);
+  if(!t)return navigate({view:DEFAULT_VIEW});
+  selected=t.id;
+ }
+ renderView();
 }
 function renderDetail(){const t=items.find(x=>x.id===selected)??items[0];selected=t.id;$('selected-title').textContent=t.name;
  $('evidence-links').innerHTML=(t.sources??[]).length?(t.sources??[]).map(s=>{const url=safeSourceUrl(s.url);return `<div class="evidence-link"><span>${esc(sourceTypes[s.type]??'Dokument')}</span>${url?`<a href="${esc(url)}" target="_blank" rel="noopener noreferrer">${esc(s.title)} ↗</a>`:`<strong>${esc(s.title)}</strong>`}<small>${esc(s.version||'Dato ikke oppgitt')} · ${esc(s.note||'Hva kilden underbygger er ikke oppgitt.')}</small></div>`}).join(''):'<p>Ingen dokumentasjon lagt til. Knytt presentasjoner, produktarbeid og analyser til antakelsene.</p>';
@@ -49,7 +80,7 @@ function updateSensitivity(){const t=items.find(x=>x.id===selected);if(!t)return
 }
 function openEditor(id=null){editing=id;deleteArmed=false;const t=id?items.find(x=>x.id===id):{name:'',description:'',segment:'',customers:Math.min(100000,productCustomers),reach:50,baseline:8,value:6000,low:0,expected:.3,high:.6,cost:0,setup:0,costItems:[],teams:[],sources:[],effectSourceId:'',risks:[],confidence:'hypothesis',evidence:'',strategicFit:'medium',strategicFitNote:'',horizon:'',requires:[],keyResultIds:[],valueOverride:false};formValidation.reset();$('form').reset();renderResourceEditor(t);$('roadmap-editor-section').innerHTML=measureRoadmapFields(t,items)+measureValueField(t);Object.entries(t).forEach(([key,value])=>{const el=$('form').elements.namedItem(key);if(el&&!Array.isArray(value))el.value=value});syncValueField();$('editor-title').textContent=id?'Rediger tiltak':'Nytt tiltak';$('delete').hidden=!id;$('delete').textContent='Slett tiltak';$('form-error').textContent='';$('editor').showModal();$('form').elements.namedItem('customers').max=productCustomers;$('form').elements.namedItem('name').focus();}
 function closeEditor(){$('editor').close()}
-function select(id){selected=id;render();$('live').textContent=`Viser scenarioer for ${items.find(x=>x.id===id).name}.`}
+function select(id){selected=id;navigate({view:'measure',measureId:id});$('live').textContent=`Viser ${items.find(x=>x.id===id)?.name??'tiltaket'}.`}
 function focusSelected(){document.querySelector(`[data-select="${selected}"]`)?.focus({preventScroll:true})}
  $('rows').addEventListener('click',e=>{const row=e.target.closest('[data-id]');if(row){select(row.dataset.id);focusSelected();if(e.target.closest('[data-risk-jump]'))$('risk-panel').scrollIntoView({block:'start'})}});
  $('edit-risks').addEventListener('click',()=>{openEditor(selected);$('risk-editor-section').scrollIntoView({block:'start'});});
@@ -124,6 +155,8 @@ bindRoster(()=>items,()=>{if(items.length)renderTasks(items.find(x=>x.id===selec
 bindProblems(()=>items,()=>renderRoadmap());
 bindBaselineToggle(()=>renderRoadmap());
 bindParameters(()=>items,()=>render());
+buildNav();
+bindRouter(onNavigate);
 render();
 saveNow();
 
