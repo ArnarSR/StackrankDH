@@ -47,7 +47,7 @@ Prioriteringslab sammenligner to utvalg og rekkefølger av arbeid med samme team
 15. Segmentene er inndata; adresserbare kunder og rekkevidde utledes. Ikke gjør skalarene redigerbare igjen når et tiltak har segmentrader – da finnes det to sannheter.
 16. Risikomatrisen er en visning av sannsynlighet og konsekvens som allerede ligger på hver risiko. Ingen score, ingen påvirkning på rangeringen.
 17. Kundeverdien settes sammen av deler og kappes ved 12 måneder, nettopp for å hindre at full CLV smugles inn i strid med punkt 2. Tiltak arver standarden; overstyrte tiltak endres aldri i stillhet, men listes som avvik.
-15. Objectives, key results og visjon er en kvalitativ ramme. De endrer ingen økonomiske tall, og manglende kobling er en rapportert mangel, ikke en valideringsfeil.
+18. Objectives, key results og visjon er en kvalitativ ramme. De endrer ingen økonomiske tall, og manglende kobling er en rapportert mangel, ikke en valideringsfeil.
 
 ## Kjente begrensninger
 

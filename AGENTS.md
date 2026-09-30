@@ -61,6 +61,8 @@ Ren modell adskilt fra grensesnitt. Modellfilene er testbare uten DOM; `*-ui.mjs
 | `parameters.mjs` | Kundebase og kundeverdi, arv og avvik |
 | `storage.mjs` | Lokal lagring, versjonering, import-validering |
 | `github.mjs` | Issue-URL-er, CSV-eksport, URL-validering |
+| `router.mjs` | **Hash-ruting.** Rene parse/format-funksjoner + DOM-binding. Visningsregisteret bygger også venstremenyen |
+| `segments.mjs` | Segmenter som ikke overlapper, TAM/SAM/SOM, utledning av tiltakets skalarer |
 | `validation.mjs` | `problem(message, scope, id, fields)` — felles feilformat med presise feltreferanser |
 
 Alt av tilstand ligger i minnet i modulvariabler og lagres via `snapshot()`/`restore()` som hver `*-ui.mjs` eksporterer. `app.js` orkestrerer.
@@ -68,6 +70,10 @@ Alt av tilstand ligger i minnet i modulvariabler og lagres via `snapshot()`/`res
 ## Hva som bør gjøres
 
 Prioritert. De tre første er avgrensede og trygge; resten krever en beslutning før koding.
+
+### 0. Business Units — neste ut
+
+Eneste gjenstående punkt fra bestillingen om sidevisninger og segmenter. Én BU eier verdien per tiltak, deltakende BU-er utledes av rollene på teamradene (`roster.mjs` får `businessUnitId`). Ny visning som viser nettoverdi per eiende BU og en matrise over hvem som høster mot hvem som må bidra. Entydig eierskap er valgt nettopp for at summen per BU ikke skal kunne dobbelttelle.
 
 ### 1. Eksponer tapstabellen for kontekstbytte
 
