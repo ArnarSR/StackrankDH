@@ -43,7 +43,10 @@ Prioriteringslab sammenligner to utvalg og rekkefølger av arbeid med samme team
 11. Parallellitetstapet er en justerbar antakelse med Weinberg som default — en erfaringsregel, ikke en måling. Det treffer kalendertid, ikke kostnad. Se faq.html for kilder og uenigheten mellom dem.
 12. GitHub-integrasjonen er bevisst uten autentisering. Ikke innfør tokenhåndtering i en statisk side uten å ta beslutningen eksplisitt.
 13. Nåkostnader er et eget regnskap. Problemkostnad er ikke tiltaksverdi, summeres aldri inn i en plan, og påvirkbar andel er bruttopotensial – ikke lovet gevinst.
-14. Kundeverdien settes sammen av deler og kappes ved 12 måneder, nettopp for å hindre at full CLV smugles inn i strid med punkt 2. Tiltak arver standarden; overstyrte tiltak endres aldri i stillhet, men listes som avvik.
+14. Segmentene overlapper ikke: hver kunde hører til nøyaktig ett. Rekkevidde er TAM × SAM × SOM — fortsatt én kjede, så modellskille 1 holder. Effekt og verdi slås sammen vektet etter eksponerte kunder, aldri som et rått gjennomsnitt.
+15. Segmentene er inndata; adresserbare kunder og rekkevidde utledes. Ikke gjør skalarene redigerbare igjen når et tiltak har segmentrader – da finnes det to sannheter.
+16. Risikomatrisen er en visning av sannsynlighet og konsekvens som allerede ligger på hver risiko. Ingen score, ingen påvirkning på rangeringen.
+17. Kundeverdien settes sammen av deler og kappes ved 12 måneder, nettopp for å hindre at full CLV smugles inn i strid med punkt 2. Tiltak arver standarden; overstyrte tiltak endres aldri i stillhet, men listes som avvik.
 15. Objectives, key results og visjon er en kvalitativ ramme. De endrer ingen økonomiske tall, og manglende kobling er en rapportert mangel, ikke en valideringsfeil.
 
 ## Kjente begrensninger

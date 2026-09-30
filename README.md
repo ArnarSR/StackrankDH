@@ -103,6 +103,34 @@ Nettleserlagring kan feile: privat modus, full kvote eller blokkerte nettsteddat
 
 **Dette er ikke delt lagring.** Data ligger bare hos deg, i én nettleser på én maskin. Tømmer du nettleserdata, er det borte. Skal flere jobbe i samme tall, må dere enten dele en eksportfil eller bygge ekte skylagring med backend.
 
+## Sidevisninger
+
+Verktøyet er delt i egne sidevisninger med ruting i adressen: `#/portefolje`, `#/veikart`, `#/segmenter`, `#/tiltak/<id>` og så videre. Adressen er delbar og bokmerkbar, og bærer hvilket tiltak som er valgt — før lå det bare i minnet og gikk tapt ved reload.
+
+Tallene i rangeringen er klikkbare og fører til kilden bak tallet: evidensnivå til kildene, nettoverdi og ROI til kostnadene, risikocellen til risikomatrisen.
+
+## Segmenter, TAM, SAM og SOM
+
+Kundebasen deles i segmenter som **ikke overlapper** — hver kunde hører til nøyaktig ett. Da kan et tiltak treffe flere segmenter uten at noen kunde telles to ganger.
+
+Rekkevidde settes per tiltak per segment, i to trinn med ulikt evidensgrunnlag:
+
+- **TAM** er segmentets størrelse.
+- **SAM** (%) er andelen som har behovet eller kunne bruke tiltaket. Ofte et markedstall man kan belegge.
+- **SOM** (%) er andelen av SAM som faktisk påvirkes eller tar det i bruk. En adopsjonsantakelse.
+
+`eksponerte = TAM × SAM/100 × SOM/100`. Det er fortsatt **én** kjede, så rekkevidde anvendes bare én gang. Hvert trinn kan ha sin egen kildereferanse, nettopp fordi de to tallene sjelden har samme grunnlag.
+
+Effekt og kundeverdi kan settes per segment, og slås sammen **vektet etter eksponerte kunder** — ikke som et rått gjennomsnitt. I eksempeldataene har små bedrifter høyere churn-effekt av proaktiv diagnostikk enn husstander, noe som gir 0,58 pp vektet der et usikret snitt ville gitt 0,65.
+
+Segmentene er tiltakets inndata; «adresserbare kunder» og «rekkevidde» **utledes** av dem. Det er derfor resten av modellen kunne stå helt urørt. Et tiltak uten segmentrader beholder sine egne tall, så data lagret før segmentene kom virker fortsatt.
+
+## Risikomatrise
+
+Hvert tiltak har en 3×3-matrise i sannsynlighet × konsekvens. Begge feltene lå allerede på hver risiko, så dette er en visning av data som fantes. Åtte typiske risikoer kan legges til med ett klikk.
+
+**Ingen risikoscore.** Plasseringen i matrisen ganges aldri inn i nettoverdi eller rangering — modellskille 4. Avhengigheter har bevisst ikke sannsynlighet og står derfor utenfor matrisen; det sies eksplisitt under den.
+
 ## Parametre
 
 Kundebase og kundeverdi settes ett sted, øverst på porteføljesiden.

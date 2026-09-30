@@ -9,6 +9,7 @@ import {renderProblems,bindProblems,bindBaselineToggle} from './problems-ui.mjs'
 import {renderParameters,bindParameters,measureValueField,applyValueChoice,standardCustomerValue,syncValueField} from './parameters-ui.mjs';
 import {STORAGE_KEY,safeRead,safeWrite,safeClear,parseEnvelope,makeEnvelope,exportName} from './storage.mjs';
 import {views,parseRoute,routeHash,navigate,bindRouter,DEFAULT_VIEW} from './router.mjs';
+import {renderSegments,renderMeasureSegments,bindSegments,syncSegments,snapshotSegments,restoreSegments,currentSegments,setMeasureContext} from './segments-ui.mjs';
 import {snapshotRoadmap,restoreRoadmap} from './roadmap-ui.mjs';
 import {snapshotRoster,restoreRoster} from './roster-ui.mjs';
 import {snapshotProblems,restoreProblems} from './problems-ui.mjs';
@@ -25,6 +26,7 @@ let productCustomers=250000;
 let items=structuredClone(examples),selected=items[0].id,editing=null,deleteArmed=false;
 const formValidation=createFormValidation($('form'),readDraft);
 function render(){
+ syncSegments(items);
  renderProductWarnings();
  const sorted=sortMeasures(items,$('sort').value);const totals=items.reduce((a,t)=>{const c=calculate(t);a.net+=c.net;a.low+=scenario(t,'low').net;a.high+=scenario(t,'high').net;a.retained+=c.retained;a.cost+=c.cost;return a},{net:0,low:0,high:0,retained:0,cost:0});
  const cards=[['Forventet nettoverdi',compact(totals.net)+' kr','Sum av enkeltstående tiltak','highlight'],['Beholdte kunder',number(totals.retained),'Forventet · før korreksjon for overlapp',''],['Tiltakskostnad, første år',compact(totals.cost)+' kr','Tjenester, engangsposter og teaminnsats',''],['Tiltak med positivt lavscenario',items.filter(t=>scenario(t,'low').net>0).length+' av '+items.length,'Nettoverdi over null i lavscenarioet','']];
@@ -38,6 +40,7 @@ let route={view:DEFAULT_VIEW};
 function renderView(){
  const byView={
   measure:()=>{const t=items.find(x=>x.id===route.measureId);if(t){selected=t.id;renderDetail()}},
+  segments:renderSegments,
   capacity:renderCapacity,
   strategy:renderStrategy,
   roadmap:renderBoard,
@@ -66,7 +69,7 @@ function onNavigate(next){
 }
 function renderDetail(){const t=items.find(x=>x.id===selected)??items[0];selected=t.id;$('selected-title').textContent=t.name;
  $('evidence-links').innerHTML=(t.sources??[]).length?(t.sources??[]).map(s=>{const url=safeSourceUrl(s.url);return `<div class="evidence-link"><span>${esc(sourceTypes[s.type]??'Dokument')}</span>${url?`<a href="${esc(url)}" target="_blank" rel="noopener noreferrer">${esc(s.title)} ↗</a>`:`<strong>${esc(s.title)}</strong>`}<small>${esc(s.version||'Dato ikke oppgitt')} · ${esc(s.note||'Hva kilden underbygger er ikke oppgitt.')}</small></div>`}).join(''):'<p>Ingen dokumentasjon lagt til. Knytt presentasjoner, produktarbeid og analyser til antakelsene.</p>';
- const scenarios=['low','expected','high'].map(k=>scenario(t,k));renderResourceDetails(t);renderTasks(t);
+ const scenarios=['low','expected','high'].map(k=>scenario(t,k));renderResourceDetails(t);renderTasks(t);setMeasureContext(t.id);renderMeasureSegments(t);
  const rows=[['Churn-reduksjon',[t.low,t.expected,t.high].map(pp)],['Churn etter tiltak',scenarios.map(c=>number(c.churn,2)+' %')],['Beholdte kunder',scenarios.map(c=>number(c.retained,1))],['Bruttoverdi',scenarios.map(c=>money(c.gross))],['Total kostnad',scenarios.map(c=>money(c.cost))],['Nettoverdi',scenarios.map(c=>money(c.net))]];
  $('scenario-table').innerHTML=`<table class="scenario-table"><thead><tr><th>12 måneder</th><th>Lav</th><th class="expected">Forventet</th><th>Høy</th></tr></thead><tbody>${rows.map(([label,vals],i)=>`<tr><td>${label}</td>${vals.map((v,j)=>`<td class="${j===1?'expected ':''}${i===5?(scenarios[j].net<0?'negative':'positive'):''}">${v}</td>`).join('')}</tr>`).join('')}</tbody></table>`;
  $('evidence-box').innerHTML=`<p class="description">${esc(t.description)}</p>${badge(t)} ${fitBadge(t)}<p>${sourceReference(t,t.effectSourceId)}</p><p>${esc(t.evidence||'Ingen kilde eller evidensnotat registrert.')}</p><p><strong>Strategisk fit:</strong> ${esc(t.strategicFitNote||'Ingen strategisk fit-notat registrert.')}</p><p>${number(calculate(t).exposed)} eksponerte kunder · ${number(t.reach,1)} % av ${number(t.customers)} adresserbare (${productCustomers?number(t.customers/productCustomers*100,1)+' %':'—'} av produktets kundebase på ${number(productCustomers)})</p>`;
@@ -105,10 +108,10 @@ $('product-warning').addEventListener('click',e=>{const b=e.target.closest('[dat
 function renderProductWarnings(){const outside=items.filter(t=>t.customers>productCustomers);$('product-warning').innerHTML=outside.length?`<strong>${outside.length} tiltak har flere adresserbare kunder enn produktets kundebase. Rett anslagene før verdiene brukes.</strong>${outside.map(t=>`<button class="error-jump" data-fix-product="${esc(t.id)}">${esc(t.name)}: ${number(t.customers)} kunder – gå til tiltaket ↗</button>`).join('')}`:'';}
 // Autolagring i nettleseren. Feiler den, sier appen fra og fortsetter i minnet.
 function snapshot(){currentParameters().product.customers=productCustomers;
- return {items,...snapshotRoadmap(),...snapshotRoster(),...snapshotProblems(),parameters:snapshotParameters()};}
+ return {items,...snapshotRoadmap(),...snapshotRoster(),...snapshotProblems(),...snapshotSegments(),parameters:snapshotParameters()};}
 function applyWorkspace(w){
  if(Array.isArray(w.items)&&w.items.length){items=w.items;selected=items[0].id}
- restoreRoadmap(w);restoreRoster(w);restoreProblems(w);restoreParameters(w.parameters);
+ restoreRoadmap(w);restoreRoster(w);restoreProblems(w);restoreSegments(w);restoreParameters(w.parameters);
  const base=currentParameters()?.product?.customers;
  if(Number.isInteger(base)&&base>=0){productCustomers=base;$('product-customers').value=base}
 }
@@ -164,6 +167,7 @@ bindRoadmap(()=>items,select);
 bindRoster(()=>items,()=>{if(items.length)renderTasks(items.find(x=>x.id===selected)??items[0])});
 bindProblems(()=>items,()=>renderRoadmap());
 bindBaselineToggle(()=>renderRoadmap());
+bindSegments(()=>items,()=>currentParameters().product.customers,()=>render());
 bindParameters(()=>items,()=>render());
 buildNav();
 bindRouter(onNavigate);

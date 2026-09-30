@@ -234,3 +234,36 @@
 .common-risks select{width:100%}
 .common-risks p{flex:1;min-width:220px;margin:0}
 @media(max-width:760px){.risk-matrix-wrap{padding:0 17px 8px}.risk-matrix{font-size:11px}.risk-matrix th[scope=row]{width:64px}}
+.segments{margin-top:22px}
+.segments-body{padding:0 24px 22px;display:grid;grid-template-columns:minmax(0,1fr);gap:16px}
+.segment-totals{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.segment-totals .metric{min-height:0;padding:16px 18px}
+.segment-totals .metric-value{font-size:24px;margin:8px 0 6px}
+.segment-row{display:grid;grid-template-columns:1.6fr .8fr auto auto;gap:12px;align-items:end;padding:13px;border:1px solid var(--line);border-radius:8px;background:#fbfcfd}
+.segment-row label{display:grid;gap:6px;font-size:11px;color:#5d6e76;min-width:0}
+.segment-row input{border:1px solid #cfdce1;border-radius:6px;padding:9px;font:inherit;font-size:14px;width:100%;background:white;color:var(--ink)}
+.segment-share{font-family:Manrope,sans-serif;font-weight:750;font-size:15px;white-space:nowrap;padding-bottom:8px}
+.segment-share small{display:block;font-size:10px;font-weight:400;color:#5d6e76}
+.segment-row .danger{font-size:12px;padding:9px 8px}
+.segment-note{grid-column:1/-1;margin:0;font-size:11px;color:#5d6e76;line-height:1.55}
+.measure-segments{margin-top:20px}
+.measure-segments-body{padding:0 24px 20px;display:grid;gap:14px}
+.measure-segment-summary{display:flex;gap:20px;flex-wrap:wrap;background:#f7f9fa;border:1px solid #eaf0f2;border-radius:6px;padding:12px 14px;font-size:12px;color:#5d6e76}
+.measure-segment-summary strong{font-family:Manrope,sans-serif;font-size:15px;color:var(--ink);display:block}
+.segment-add{display:grid;gap:6px;font-size:11px;color:#5d6e76}
+.impact-row{border:1px solid var(--line);border-radius:8px;padding:13px;background:#fbfcfd;display:grid;gap:11px}
+.impact-head{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.impact-head strong{flex:1;font-size:14px}
+.impact-exposed{font-family:Manrope,sans-serif;font-weight:750;font-size:16px;white-space:nowrap}
+.impact-exposed small{display:block;font-size:10px;font-weight:400;color:#5d6e76}
+.impact-head .danger{font-size:12px;padding:6px 9px}
+.impact-funnel{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.funnel-step{display:grid;gap:4px;background:white;border:1px solid var(--line);border-radius:6px;padding:9px 11px;font-family:Manrope,sans-serif;font-weight:750;font-size:15px}
+.funnel-step small{font-size:10px;font-weight:600;color:#5d6e76;letter-spacing:.6px;font-family:'DM Sans',sans-serif}
+.funnel-step em{font-size:10px;font-style:normal;font-weight:400;color:#5d6e76;font-family:'DM Sans',sans-serif}
+.funnel-step input{border:1px solid #cfdce1;border-radius:5px;padding:6px 7px;font:inherit;font-size:15px;font-family:Manrope,sans-serif;font-weight:750;width:100%;background:white;color:var(--ink)}
+.impact-effect{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.impact-effect label{display:grid;gap:5px;font-size:11px;color:#5d6e76;min-width:0}
+.impact-effect input{border:1px solid #cfdce1;border-radius:6px;padding:8px;font:inherit;font-size:13px;width:100%;background:white;color:var(--ink)}
+.impact-note{margin:0;font-size:11px;color:#5d6e76;line-height:1.5}
+@media(max-width:900px){.segment-totals,.impact-funnel{grid-template-columns:1fr}.segment-row{grid-template-columns:1fr 1fr}.segment-row .segment-name{grid-column:1/-1}.impact-effect{grid-template-columns:1fr 1fr}}

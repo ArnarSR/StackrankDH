@@ -3,6 +3,7 @@
 export const views={
  portfolio:{hash:'portefolje',section:'portfolio',label:'Tiltaksportefølje',icon:'▦',title:'Tiltaksportefølje'},
  measure:{hash:'tiltak',section:'measure-page',label:'Tiltak',icon:'◈',title:'Tiltak',hidden:true},
+ segments:{hash:'segmenter',section:'segments',label:'Segmenter',icon:'◑',title:'Kundesegmenter'},
  strategy:{hash:'strategi',section:'strategy',label:'Visjon og OKR',icon:'◎',title:'Visjon, objectives og key results'},
  roadmap:{hash:'veikart',section:'roadmap',label:'Veikart',icon:'▤',title:'Veikart'},
  scenarios:{hash:'scenarioer',section:'scenarios',label:'Scenarioer',icon:'∿',title:'Scenarioer'},
