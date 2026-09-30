@@ -8,6 +8,7 @@ const money=v=>compact(v)+' kr';
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const uid=()=>crypto.randomUUID();
 let segments=seedSegments(),readItems=()=>[],readBase=()=>0,armed=null,onChanged=null;
+let editingRows=null;
 export const currentSegments=()=>segments;
 export const snapshotSegments=()=>({segments});
 export function restoreSegments(data){if(Array.isArray(data?.segments))segments=data.segments;}
@@ -16,13 +17,19 @@ export const syncSegments=items=>applySegments(items,segments,standardCustomerVa
 export function renderSegments(){
  const base=readBase(),items=readItems();
  const totals=segmentTotals(segments,base);
+ const share=s=>`${base>0?number(s.customers/base*100,1)+' %':'—'}<small>av kundebasen</small>`;
  $('segment-error').textContent=validateSegments(segments,base);
- $('segment-rows').innerHTML=segments.map(s=>{
+ if(editingRows==='segment-rows'){
+  for(const row of $('segment-rows').querySelectorAll('[data-segment-id]')){
+   const s=segmentById(segments,row.dataset.segmentId);
+   row.querySelector('.segment-share').innerHTML=share(s);
+  }
+ }else $('segment-rows').innerHTML=segments.map(s=>{
   const brukt=items.filter(t=>(t.segmentImpact??[]).some(r=>r.segmentId===s.id));
   return `<div class="segment-row" data-segment-id="${esc(s.id)}">
    <label class="segment-name">Segment<input data-field="name" value="${esc(s.name)}" maxlength="120"></label>
    <label>Antall kunder<input data-field="customers" type="number" min="0" step="1" value="${s.customers}"></label>
-   <span class="segment-share">${base>0?number(s.customers/base*100,1)+' %':'—'}<small>av kundebasen</small></span>
+   <span class="segment-share">${share(s)}</span>
    <button type="button" class="danger" data-remove-segment="${esc(s.id)}">${armed==='seg:'+s.id?'Bekreft':'Fjern'}</button>
    <p class="segment-note">${esc(s.note??'')}${brukt.length?` · Brukes av ${esc(brukt.map(t=>t.name).join(', '))}`:' · Ingen tiltak treffer dette segmentet'}</p>
   </div>`;
@@ -45,7 +52,12 @@ export function renderMeasureSegments(t){
   $('measure-segment-summary').innerHTML='';
   return;
  }
- $('measure-segment-rows').innerHTML=derived.rows.map(r=>`<div class="impact-row" data-impact-id="${esc(r.segmentId)}">
+ if(editingRows==='measure-segment-rows'){
+  for(const row of $('measure-segment-rows').querySelectorAll('[data-impact-id]')){
+   const r=derived.rows.find(r=>r.segmentId===row.dataset.impactId);
+   row.querySelector('.impact-exposed').innerHTML=`${number(r.exposed)}<small>eksponerte</small>`;
+  }
+ }else $('measure-segment-rows').innerHTML=derived.rows.map(r=>`<div class="impact-row" data-impact-id="${esc(r.segmentId)}">
   <div class="impact-head"><strong>${esc(r.segment.name)}</strong>
    <span class="impact-exposed">${number(r.exposed)}<small>eksponerte</small></span>
    <button type="button" class="danger" data-remove-impact="${esc(r.segmentId)}">${armed==='imp:'+r.segmentId?'Bekreft':'Fjern'}</button></div>
@@ -71,13 +83,18 @@ export function renderMeasureSegments(t){
 
 export function bindSegments(getItems,getBase,onChange){
  readItems=getItems;readBase=getBase;onChanged=onChange;
- const changed=()=>{syncSegments(readItems());onChange?.()};
+ const changed=(rows=null)=>{
+  // Input utløser synkron rendering i app.js. Behold selve feltene under denne
+  // oppdateringen, så fokus, markør og uferdige tall ikke forsvinner per tegn.
+  editingRows=rows;
+  try{syncSegments(readItems());onChange?.()}finally{editingRows=null}
+ };
  $('add-segment').addEventListener('click',()=>{armed=null;segments.push({id:uid(),name:'Nytt segment',customers:0,sourceId:'',note:''});changed()});
  $('segment-rows').addEventListener('input',e=>{
   const field=e.target.dataset.field;if(!field)return;
   const s=segmentById(segments,e.target.closest('[data-segment-id]').dataset.segmentId);
   if(field==='name')s.name=e.target.value;else s.customers=Math.max(0,Math.round(e.target.valueAsNumber||0));
-  changed();
+  changed('segment-rows');
  });
  $('segment-rows').addEventListener('click',e=>{
   const id=e.target.closest('button')?.dataset.removeSegment;if(!id)return;
@@ -99,7 +116,7 @@ export function bindSegments(getItems,getBase,onChange){
   const r=(t.segmentImpact??[]).find(x=>x.segmentId===e.target.closest('[data-impact-id]').dataset.impactId);
   if(!r)return;
   r[field]=e.target.value===''&&field==='valueOverride'?undefined:e.target.valueAsNumber;
-  changed();
+  changed('measure-segment-rows');
  });
  $('measure-segment-rows').addEventListener('click',e=>{
   const id=e.target.closest('button')?.dataset.removeImpact;if(!id)return;

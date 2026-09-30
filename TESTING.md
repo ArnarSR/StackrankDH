@@ -1,5 +1,14 @@
 # Verifisering av Business Units
 
+## Fokusrettelse for segmentfelt 30.09.2026
+
+- `npm test`: 148 tester består, inkludert fire nye hendelsesflyttester i `tests/segments-flow.test.mjs`.
+- Inntasting erstatter ikke lenger input-radene. Prosentandel, summer, eksponerte kunder og valideringsmeldinger oppdateres fortsatt per tastetrykk.
+- Testene dekker flersifrede tall, tømming, segmentnavn, SAM/SOM, effekt og kundeverdi, oppretting/fjerning og opprydding etter renderfeil. De bruker en DOM-dobbel, ikke en nettleser.
+- Nettleseråpning på 127.0.0.1:4176 ble blokkert av utilgjengelig administratorkontroll. Native fokus/markør, konsoll, mobil og kontrast er ikke verifisert.
+
+Manuell sjekk som gjenstår: Last siden på nytt med ferske moduler. Skriv `122000` tegn for tegn i Antall kunder uten å klikke på nytt; rediger midt i tallet, bruk Backspace, tøm feltet og skriv et nytt tall. Kontroller summer/prosent og at navnefeltet også beholder markøren. Gjenta med SAM/SOM, desimale effekttall og tom kundeverdi på tiltakssiden. Kontroller Tab-navigasjon, lagring etter ny innlasting og 375 px visning i en separat testprofil.
+
 ## SQL-leveranse 30.09.2026
 
 Branch `feat/postgres-storage` bygger på BU-commit `0b6a26e`.

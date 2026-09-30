@@ -13,7 +13,7 @@ Hele grensesnittet og all dokumentasjon er på **norsk**. Beløp i **NOK**, form
 ```
 npm start    # Node-server med PostgreSQL; krever .env og npm run db:migrate
 npm run start:local  # Statisk utgave med nettleserlagring
-npm test     # 144 modell-, adapter- og smoke-tester
+npm test     # 148 modell-, adapter-, hendelsesflyt- og smoke-tester
 npm run test:integration  # 12 tester mot separat PostgreSQL-testdatabase
 ```
 
