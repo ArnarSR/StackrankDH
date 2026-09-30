@@ -1,5 +1,5 @@
 import {createFormValidation} from './form-validation.mjs';
-import {riskSummary} from './risks.mjs';
+import {riskSummary,commonRisks} from './risks.mjs';
 import {costBreakdown,resourcePortfolio,safeSourceUrl,sourceTypes} from './resources.mjs';
 import {renderResourceDetails,renderResourceEditor,readResourceEditor,bindResourceEditor,sourceReference} from './resource-ui.mjs';
 import {examples,evidence,strategicFit,calculate,sortMeasures,scenario} from './model.mjs';
@@ -29,7 +29,7 @@ function render(){
  const sorted=sortMeasures(items,$('sort').value);const totals=items.reduce((a,t)=>{const c=calculate(t);a.net+=c.net;a.low+=scenario(t,'low').net;a.high+=scenario(t,'high').net;a.retained+=c.retained;a.cost+=c.cost;return a},{net:0,low:0,high:0,retained:0,cost:0});
  const cards=[['Forventet nettoverdi',compact(totals.net)+' kr','Sum av enkeltstående tiltak','highlight'],['Beholdte kunder',number(totals.retained),'Forventet · før korreksjon for overlapp',''],['Tiltakskostnad, første år',compact(totals.cost)+' kr','Tjenester, engangsposter og teaminnsats',''],['Tiltak med positivt lavscenario',items.filter(t=>scenario(t,'low').net>0).length+' av '+items.length,'Nettoverdi over null i lavscenarioet','']];
  $('metrics').innerHTML=cards.map(([label,value,note,cl])=>`<div class="metric ${cl}"><span class="metric-label">${label}</span><div class="metric-value">${value}</div><small>${note}</small></div>`).join('');$('count').textContent=items.length;
- $('rows').innerHTML=sorted.length?sorted.map((t,i)=>{const c=calculate(t),risk=riskSummary(t);return `<tr data-id="${esc(t.id)}" class="${selected===t.id?'selected':''}"><td><span class="rank">${String(i+1).padStart(2,'0')}</span></td><td><button class="name-button" data-select="${esc(t.id)}" aria-pressed="${selected===t.id}">${esc(t.name)}</button><div class="segment">${esc(t.segment)}</div></td><td>${badge(t)}</td><td>${fitBadge(t)}</td><td class="risk-cell"><button class="risk-jump ${risk.blocked?'risk-blocked':risk.severe?'risk-attention':''}" data-risk-jump="true">${risk.total?risk.active+(risk.active===1?' åpent forhold':' åpne forhold'):'Ikke registrert'}</button><small>${[risk.blocked?risk.blocked+' blokkert':null,risk.severe?risk.severe+(risk.severe===1?' risiko med høy konsekvens':' risikoer med høy konsekvens'):null].filter(Boolean).join(' · ')}</small></td><td>${number(c.retained,1)}</td><td class="money ${c.net<0?'negative':'positive'}" title="${money(c.net)}">${compact(c.net)} kr</td><td class="range-cell" title="${money(scenario(t,'low').net)} → ${money(scenario(t,'high').net)}">${compact(scenario(t,'low').net)} → ${compact(scenario(t,'high').net)}</td><td class="${c.roi<0?'negative':'positive'}">${c.roi===null?'—':number(c.roi)+' %'}</td><td aria-hidden="true">↗</td></tr>`}).join(''):'<tr><td colspan="10" class="empty">Ingen tiltak ennå. Legg til et tiltak for å starte beregningen.</td></tr>';
+ $('rows').innerHTML=sorted.length?sorted.map((t,i)=>{const c=calculate(t),risk=riskSummary(t);return `<tr data-id="${esc(t.id)}" class="${selected===t.id?'selected':''}"><td><span class="rank">${String(i+1).padStart(2,'0')}</span></td><td><button class="name-button" data-select="${esc(t.id)}" aria-pressed="${selected===t.id}">${esc(t.name)}</button><div class="segment">${esc(t.segment)}</div></td><td data-drill="kilder" title="Se kilder og evidensgrunnlag">${badge(t)}</td><td>${fitBadge(t)}</td><td class="risk-cell" data-drill="risiko" title="Se risiko og avhengigheter"><button class="risk-jump ${risk.blocked?'risk-blocked':risk.severe?'risk-attention':''}" data-risk-jump="true">${risk.total?risk.active+(risk.active===1?' åpent forhold':' åpne forhold'):'Ikke registrert'}</button><small>${[risk.blocked?risk.blocked+' blokkert':null,risk.severe?risk.severe+(risk.severe===1?' risiko med høy konsekvens':' risikoer med høy konsekvens'):null].filter(Boolean).join(' · ')}</small></td><td data-drill title="Se hvordan beholdte kunder er regnet ut">${number(c.retained,1)}</td><td class="money ${c.net<0?'negative':'positive'}" data-drill="kostnader" title="${money(c.net)} · se kostnadene bak">${compact(c.net)} kr</td><td class="range-cell" data-drill title="${money(scenario(t,'low').net)} → ${money(scenario(t,'high').net)} · se de tre utfallene">${compact(scenario(t,'low').net)} → ${compact(scenario(t,'high').net)}</td><td class="${c.roi<0?'negative':'positive'}" data-drill="kostnader" title="Se kostnadene ROI bygger på">${c.roi===null?'—':number(c.roi)+' %'}</td><td aria-hidden="true">↗</td></tr>`}).join(''):'<tr><td colspan="10" class="empty">Ingen tiltak ennå. Legg til et tiltak for å starte beregningen.</td></tr>';
  renderView();
 }
 // Hver visning rendres bare når den er synlig. Rangeringen og nøkkeltallene over
@@ -59,6 +59,8 @@ function onNavigate(next){
   const t=items.find(x=>x.id===next.measureId);
   if(!t)return navigate({view:DEFAULT_VIEW});
   selected=t.id;
+  renderView();
+  return t.name;
  }
  renderView();
 }
@@ -82,8 +84,16 @@ function openEditor(id=null){editing=id;deleteArmed=false;const t=id?items.find(
 function closeEditor(){$('editor').close()}
 function select(id){selected=id;navigate({view:'measure',measureId:id});$('live').textContent=`Viser ${items.find(x=>x.id===id)?.name??'tiltaket'}.`}
 function focusSelected(){document.querySelector(`[data-select="${selected}"]`)?.focus({preventScroll:true})}
- $('rows').addEventListener('click',e=>{const row=e.target.closest('[data-id]');if(row){select(row.dataset.id);focusSelected();if(e.target.closest('[data-risk-jump]'))$('risk-panel').scrollIntoView({block:'start'})}});
+ $('rows').addEventListener('click',e=>{const row=e.target.closest('[data-id]');if(!row)return;const cell=e.target.closest('[data-drill]');navigate({view:'measure',measureId:row.dataset.id,anchor:cell?.dataset.drill||undefined});});
  $('edit-risks').addEventListener('click',()=>{openEditor(selected);$('risk-editor-section').scrollIntoView({block:'start'});});
+// Typisk risiko legges rett på tiltaket, og dialogen åpnes så den kan tilpasses.
+$('common-risk').addEventListener('change',e=>{
+ const mal=commonRisks[Number(e.target.value)];e.target.value='';
+ const t=items.find(x=>x.id===selected);if(!mal||!t)return;
+ t.risks=[...(t.risks??[]),{...mal,id:crypto.randomUUID(),kind:'risk',status:'open',owner:'',sourceId:''}];
+ render();navigate({view:'measure',measureId:t.id,anchor:'risiko'});
+ $('live').textContent=`«${mal.title}» er lagt til som risiko.`;
+});
  $('edit-resources').addEventListener('click',()=>{openEditor(selected);$('resource-editor-section').scrollIntoView({block:'start'});});
  $('sort').addEventListener('change',render);$('sensitivity').addEventListener('input',updateSensitivity);$('add').addEventListener('click',()=>openEditor());$('edit').addEventListener('click',()=>openEditor(selected));$('close').addEventListener('click',closeEditor);$('cancel').addEventListener('click',closeEditor);
  function readDraft(){const raw=Object.fromEntries(new FormData($('form')));const t={...raw,...readResourceEditor(),...readMeasureRoadmapFields($('form')),valueOverride:$('form').elements.namedItem('valueOverride')?.checked??false,cost:0,setup:0,productCustomers,id:editing??'draft',name:(raw.name??'').trim()};['customers','reach','baseline','value','low','expected','high'].forEach(k=>t[k]=raw[k]?.trim()===''?NaN:Number(raw[k]));return applyValueChoice(t);}

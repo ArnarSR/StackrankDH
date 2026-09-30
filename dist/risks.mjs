@@ -4,6 +4,31 @@ export const riskLevels={low:'Lav',medium:'Middels',high:'Høy'};
 export const riskStatuses={risk:{open:'Åpen',mitigating:'Tiltak pågår',closed:'Lukket'},dependency:{unconfirmed:'Uavklart',confirmed:'Bekreftet',blocked:'Blokkert'}};
 export const riskIsActive=r=>r.kind==='dependency'?r.status!=='confirmed':r.status!=='closed';
 export function riskSummary(t){const risks=t.risks??[];return {total:risks.length,active:risks.filter(riskIsActive).length,blocked:risks.filter(r=>r.kind==='dependency'&&r.status==='blocked').length,unconfirmed:risks.filter(r=>r.kind==='dependency'&&r.status==='unconfirmed').length,severe:risks.filter(r=>r.kind==='risk'&&riskIsActive(r)&&r.severity==='high').length,unowned:risks.filter(r=>riskIsActive(r)&&!r.owner?.trim()).length};}
+// Matrisen er en visning av sannsynlighet × konsekvens som allerede ligger på
+// hver risiko. Ingen score regnes ut, og ingenting av dette rører økonomien.
+export const riskOrder=['low','medium','high'];
+export function riskMatrix(t){
+ const risks=(t.risks??[]).filter(r=>r.kind==='risk');
+ const cells=riskOrder.map(probability=>riskOrder.map(severity=>({
+  probability,severity,
+  risks:risks.filter(r=>r.probability===probability&&r.severity===severity&&riskIsActive(r))
+ })));
+ return {cells,placed:risks.filter(riskIsActive).length,
+  closed:risks.filter(r=>!riskIsActive(r)).length,
+  dependencies:(t.risks??[]).filter(r=>r.kind==='dependency')};
+}
+// Typiske risikoer å legge til med ett klikk. Illustrative formuleringer; ingen
+// sannsynlighet eller konsekvens er forhåndsvalgt utover et nøytralt utgangspunkt.
+export const commonRisks=[
+ {title:'Effekten er mindre enn antatt i full skala',severity:'high',probability:'medium',consequence:'Verdien uteblir selv om tiltaket leveres som planlagt.',action:'Mål effekten i en avgrenset pilot før full utrulling.',trigger:'Piloten viser lavere effekt enn business caset forutsetter.'},
+ {title:'Lav adopsjon blant kundene',severity:'high',probability:'medium',consequence:'Rekkevidden blir lavere enn anslått, og verdien skaleres ned tilsvarende.',action:'Test aktivering og vedvarende bruk i liten skala først.',trigger:'Aktiveringen ligger under det anslaget bygger på.'},
+ {title:'Avhengighet til ekstern leverandør',severity:'high',probability:'medium',consequence:'Leveransen kan bli forsinket eller stoppet av forhold utenfor egen kontroll.',action:'Avklar leveranseplan og et alternativ før arbeidet starter.',trigger:'Leverandøren bekrefter ikke dato innen beslutningspunktet.'},
+ {title:'Personvern eller regulatoriske krav ikke avklart',severity:'high',probability:'low',consequence:'Lansering kan måtte utsettes eller endres vesentlig.',action:'Involver personvern tidlig og få en skriftlig vurdering.',trigger:'Vurderingen er ikke ferdig før utviklingen er i gang.'},
+ {title:'Datakvaliteten holder ikke',severity:'medium',probability:'medium',consequence:'Tiltaket kan ikke måles, eller treffer feil kunder.',action:'Verifiser datadekning og kvalitet før integrasjonsarbeidet starter.',trigger:'Datadekningen er lavere enn det tiltaket krever.'},
+ {title:'Økt belastning på kundeservice',severity:'medium',probability:'medium',consequence:'Kostnadene øker og kundeopplevelsen kan bli dårligere enn før.',action:'Avtal kapasitet og stoppkriterier med kundeservice før pilot.',trigger:'Henvendelsesvolumet overstiger avtalt grense.'},
+ {title:'Overlapp med et annet tiltak',severity:'medium',probability:'high',consequence:'Verdien telles to ganger dersom begge tiltak krediteres samme effekt.',action:'Avklar hvilket tiltak som krediteres effekten før begge besluttes.',trigger:'To tiltak oppgir effekt på samme kundegruppe.'},
+ {title:'Teamet blir trukket til annet arbeid',severity:'medium',probability:'high',consequence:'Leveransen forskyves, og gevinsten starter senere enn planlagt.',action:'Forankre kapasiteten før oppstart, og synliggjør hva som fortrenges.',trigger:'Tildelt kapasitet reduseres etter oppstart.'}
+];
 export function validateRisks(t){return validateRiskIssue(t)?.message??'';}
 export function validateRiskIssue(t){const ids=new Set((t.sources??[]).map(s=>s.id));for(const [i,r] of (t.risks??[]).entries()){
  const fail=(message,...fields)=>problem(`Risiko/avhengighet ${i+1}${r.title?' – '+r.title:''}: ${message}`,'risk',r.id,fields);

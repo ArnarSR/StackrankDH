@@ -1,4 +1,4 @@
-import {riskTypes,riskLevels,riskStatuses,riskSummary,riskIsActive} from './risks.mjs';
+import {riskTypes,riskLevels,riskStatuses,riskSummary,riskIsActive,riskMatrix,riskOrder,commonRisks} from './risks.mjs';
 import {cases,estimate,costBreakdown,teamEffort,validateResources,sourceTypes,safeSourceUrl} from './resources.mjs';
 const $=id=>document.getElementById(id);
 const n=(v,d=0)=>new Intl.NumberFormat('nb-NO',{maximumFractionDigits:d}).format(v);
@@ -64,7 +64,22 @@ function renderSources(t){const sources=t.sources??[];$('source-count').textCont
 
 function choice(label,field,value,options,disabled=false){return `<label>${label}<select data-field="${field}" ${disabled?'disabled':''}>${Object.entries(options).map(([k,v])=>`<option value="${k}" ${value===k?'selected':''}>${v}</option>`).join('')}</select></label>`}
 function riskCard(r,i,sources){return `<fieldset class="resource-card" data-risk-id="${esc(r.id)}"><legend>Forhold ${i+1}</legend><button type="button" class="remove-row" data-remove-risk="${esc(r.id)}" aria-label="Fjern forhold ${i+1}">Fjern</button>${input('Hva må være på plass / hva kan gå galt?','title',r.title,{type:'text'})}<div class="form-grid">${choice('Type','kind',r.kind,riskTypes)}${choice('Status','status',r.status,riskStatuses[r.kind])}${choice('Sannsynlighet','probability',r.probability,riskLevels,r.kind==='dependency')}${choice('Konsekvensgrad','severity',r.severity,riskLevels)}</div><label>Konsekvens for verdi, kostnad eller tid<textarea data-field="consequence" rows="2" maxlength="1000" required>${esc(r.consequence)}</textarea></label><label>Ansvarlig team / person<input data-field="owner" value="${esc(r.owner)}" maxlength="120" placeholder="Hvem følger opp?"></label><label>Hva gjør vi med det?<textarea data-field="action" rows="2" maxlength="1000">${esc(r.action)}</textarea></label><label>Varselsignal / beslutningspunkt<textarea data-field="trigger" rows="2" maxlength="600">${esc(r.trigger)}</textarea></label>${sourceSelect(sources,r.sourceId)}</fieldset>`}
-function renderRisks(t){const summary=riskSummary(t);$('risk-summary').innerHTML=`<span class="risk-pill ${summary.blocked?'risk-blocked':''}">Blokkerte avhengigheter: ${summary.blocked}</span><span class="risk-pill ${summary.severe?'risk-attention':''}">Åpne risikoer med høy konsekvens: ${summary.severe}</span><span class="risk-pill">Uavklarte avhengigheter: ${summary.unconfirmed}</span>`;
+function renderRiskMatrix(t){
+ const m=riskMatrix(t);
+ const head='<tr><th class="matrix-corner"><span>Sannsynlighet</span><span>Konsekvens</span></th>'+riskOrder.map(s=>`<th scope="col">${riskLevels[s]}</th>`).join('')+'</tr>';
+ // Høy sannsynlighet øverst, slik matriser vanligvis leses.
+ const rows=[...m.cells].reverse().map(row=>{
+  const p=row[0].probability;
+  return `<tr><th scope="row">${riskLevels[p]}</th>`+row.map(cell=>{
+   const level=cell.risks.length?(cell.probability==='high'&&cell.severity==='high'?'critical':cell.probability==='low'&&cell.severity==='low'?'calm':'watch'):'';
+   return `<td class="matrix-cell ${level}">${cell.risks.map(r=>`<span class="matrix-risk" title="${esc(r.consequence??'')}">${esc(r.title)}</span>`).join('')}</td>`;
+  }).join('')+'</tr>';
+ }).join('');
+ $('risk-matrix').innerHTML=`<table class="risk-matrix">${head}${rows}</table>`
+  +`<p class="field-help">${m.placed} aktiv${m.placed===1?' risiko':'e risikoer'} plassert${m.closed?` · ${m.closed} lukket og utelatt`:''}${m.dependencies.length?` · ${m.dependencies.length} avhengighet${m.dependencies.length===1?'':'er'} står utenfor matrisen, de har ikke sannsynlighet`:''}.</p>`;
+ $('common-risk').innerHTML='<option value="">Velg en typisk risiko …</option>'+commonRisks.map((r,i)=>`<option value="${i}">${esc(r.title)}</option>`).join('');
+}
+function renderRisks(t){renderRiskMatrix(t);const summary=riskSummary(t);$('risk-summary').innerHTML=`<span class="risk-pill ${summary.blocked?'risk-blocked':''}">Blokkerte avhengigheter: ${summary.blocked}</span><span class="risk-pill ${summary.severe?'risk-attention':''}">Åpne risikoer med høy konsekvens: ${summary.severe}</span><span class="risk-pill">Uavklarte avhengigheter: ${summary.unconfirmed}</span>`;
  const priority=r=>r.status==='blocked'?100:riskIsActive(r)?({high:30,medium:20,low:10}[r.severity]):0;
  $('risk-list').innerHTML=t.risks?.length?[...t.risks].sort((a,b)=>priority(b)-priority(a)).map(r=>`<article class="risk-entry ${r.status==='blocked'?'blocked-entry':''} ${!riskIsActive(r)?'resolved-entry':''}"><div class="risk-entry-head"><span class="badge neutral">${riskTypes[r.kind]}</span><span class="risk-pill ${r.status==='blocked'?'risk-blocked':''}">${riskStatuses[r.kind][r.status]}</span></div><h3>${esc(r.title)}</h3><div class="risk-facts"><span>Konsekvens: <strong>${riskLevels[r.severity]}</strong></span>${r.kind==='risk'?`<span>Sannsynlighet: <strong>${riskLevels[r.probability]}</strong></span>`:''}<span>Ansvarlig: <strong>${esc(r.owner||'Ikke avklart')}</strong></span></div><p class="risk-consequence">${esc(r.consequence)}</p><dl><div><dt>Håndtering</dt><dd>${esc(r.action||'Ikke beskrevet')}</dd></div><div><dt>Varselsignal / beslutningspunkt</dt><dd>${esc(r.trigger||'Ikke beskrevet')}</dd></div></dl><p>${sourceReference(t,r.sourceId)}</p></article>`).join(''):'<p class="resource-note">Ingen risikoer eller avhengigheter er registrert for tiltaket. Dette er ikke en vurdering av at risikoen er lav.</p>';
 }

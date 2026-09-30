@@ -54,8 +54,9 @@ export function bindRouter(onNavigate){
   }
   for(const link of document.querySelectorAll('.nav[data-view]'))
    link.classList.toggle('active',link.dataset.view===route.view);
-  onNavigate(route);
-  document.title=`Churn Studio · ${config.title}`;
+  // Visningen kan gi en mer presis tittel enn registeret, f.eks. tiltakets navn.
+  const title=onNavigate(route);
+  document.title=`Churn Studio · ${title||config.title}`;
   const section=document.getElementById(config.section);
   const heading=section?.querySelector('h1,h2');
   if(heading){heading.setAttribute('tabindex','-1');heading.focus({preventScroll:true})}
